@@ -1,0 +1,128 @@
+/* ===== FULL PAGE BACKGROUND ===== */
+.login-page {
+  min-height: 100vh;
+  background-image: url("https://images.unsplash.com/photo-1755808598910-7992a34d325a?q=80&w=735&auto=format&fit=crop");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ===== DARK OVERLAY FOR READABILITY ===== */
+.login-overlay {
+  width: 100%;
+  min-height: 100vh;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ===== TITLE ABOVE FORM ===== */
+.login-title {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.login-title h2 {
+  font-size: 32px;
+  color: white;
+  font-weight: bold;
+}
+
+.login-title p {
+  font-size: 16px;
+  color: #eaeaea;
+}
+
+/* ===== LOGIN CARD ===== */
+.login-form {
+  width: 380px;
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0px 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.login-form h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* ===== INPUT FIELDS ===== */
+.login-form input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box; /* Ensures padding doesn't break width */
+}
+
+/* ===== LOGIN BUTTON ===== */
+.login-form button {
+  width: 100%;
+  padding: 12px;
+  background: #0066ff;
+  color: white;
+  border: none;
+  font-size: 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.login-form button:hover {
+  background: #004fcc;
+}
+
+/* ===== LINKS & TEXT ===== */
+.forgot-password {
+  text-align: center;
+  margin-top: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+}
+
+.forgot-password:hover {
+  color: #333;
+}
+
+.register-text {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #333;
+}
+
+.register-link {
+  color: #0066ff;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+
+/* ===== SUCCESS & ERROR MESSAGES ===== */
+.success-msg {
+  color: green;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 15px;
+}
+
+.error-msg {
+  color: red;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 15px;
+}
