@@ -1,3 +1,143 @@
+// src/config/db.js
+import mongoose from "mongoose";
+
+export const connectDB = async () => {
+  await mongoose.connect(process.env.MONGO_URI);
+  console.log("MongoDB connected");
+};
+// src/models/book.model.js
+import mongoose from "mongoose";
+
+const bookSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    author: { type: String, required: true, trim: true },
+    isbn: { type: String, required: true, unique: true, trim: true },
+    available: { type: Boolean, default: true },
+  },
+  { timestamps: true } // createdAt auto
+);
+
+export default mongoose.model("Book", bookSchema);
+// src/services/book.service.js
+import Book from "../models/book.model.js";
+
+export const createBook = async (payload) => {
+  return Book.create(payload);
+};
+
+export const fetchAvailableBooks = async () => {
+  return Book.find({ available: true }).sort({ createdAt: -1 });
+};
+
+// src/controllers/book.controller.js
+import { createBook, fetchAvailableBooks } from "../services/book.service.js";
+
+export const addBookController = async (req, res, next) => {
+  try {
+    const { title, author, isbn, available } = req.body;
+    const book = await createBook({ title, author, isbn, available });
+    return res.status(201).json(book);
+  } catch (err) {
+    return next(err);
+  }
+};
+
+export const getAvailableBooksController = async (req, res, next) => {
+  try {
+    const books = await fetchAvailableBooks();
+    return res.status(200).json(books);
+  } catch (err) {
+    return next(err);
+  }
+};
+// src/routes/book.routes.js
+import { Router } from "express";
+import {
+  addBookController,
+  getAvailableBooksController,
+} from "../controllers/book.controller.js";
+
+const router = Router();
+
+router.post("/", addBookController);
+router.get("/available", getAvailableBooksController);
+
+export default router;
+
+// src/middleware/error.middleware.js
+export const errorHandler = (err, req, res, next) => {
+  if (err?.code === 11000) {
+    return res.status(409).json({ message: "ISBN must be unique" });
+  }
+  if (err?.name === "ValidationError") {
+    return res.status(400).json({ message: err.message });
+  }
+  return res.status(500).json({ message: "Server error" });
+};
+// src/app.js
+import express from "express";
+import bookRoutes from "./routes/book.routes.js";
+import { errorHandler } from "./middleware/error.middleware.js";
+
+const app = express();
+app.use(express.json());
+
+app.use("/api/books", bookRoutes);
+
+app.use(errorHandler);
+
+export default app;
+// src/server.js
+import dotenv from "dotenv";
+dotenv.config();
+
+import app from "./app.js";
+import { connectDB } from "./config/db.js";
+
+const PORT = process.env.PORT || 3000;
+
+const start = async () => {
+  await connectDB();
+  app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+};
+
+start();
+import mongoose from "mongoose";
+import app from "./app.js";
+
+mongoose.connect("mongodb://127.0.0.1:27017/library")
+  .then(() => {
+    app.listen(3000, () => {
+      console.log("Server running on port 3000");
+    });
+  });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # AI Chatbot Project (Travel Chatbot with RAG-Ready Architecture)
 
 ## 📌 Project Overview
@@ -311,3 +451,5 @@ The architecture is designed to support:
 ✔ Ready for RAG pipeline extension
 
 ---
+
+
