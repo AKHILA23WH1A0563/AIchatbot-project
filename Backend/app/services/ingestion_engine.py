@@ -1,13 +1,41 @@
-# app/services/ingestion_engine.py
+import os
+import uuid
+from datetime import datetime
+from PyPDF2 import PdfReader
 
-from app.utils.pdf_extractor import extract_text_from_pdfs
-from app.utils.url_extractor import extract_from_all_urls
-from app.utils.cleaner import clean_text
+# This is the name your error says is missing!
+def ingest_all_sources():
+    data_source_path = "data_source" # Ensure this folder exists
+    all_chunks = []
 
+    if not os.path.exists(data_source_path):
+        print(f"❌ Folder {data_source_path} not found!")
+        return []
 
-def ingest_all_sources() -> str:
-    pdf_text = extract_text_from_pdfs()
-    url_text = extract_from_all_urls()
+    for filename in os.listdir(data_source_path):
+        if filename.endswith(".pdf"):
+            path = os.path.join(data_source_path, filename)
+            try:
+                reader = PdfReader(path)
+                text = ""
+                for page in reader.pages:
+                    text += page.extract_text()
 
-    combined = (pdf_text or "") + "\n\n" + (url_text or "")
-    return clean_text(combined)
+                # --- METADATA MANAGEMENT LOGIC ---
+                # We create a dictionary for the chunk with Unique ID and Timestamp
+                chunk = {
+                    "chunk_id": str(uuid.uuid4()),            # Requirement: Unique ID
+                    "content": text,
+                    "metadata": {
+                        "source": filename,                   # Requirement: Traceability
+                        "ingestion_date": datetime.now().isoformat(), # Requirement: Timestamp
+                        "file_type": "pdf"
+                    }
+                }
+                all_chunks.append(chunk)
+                print(f"✅ Loaded: {filename}")
+
+            except Exception as e:
+                print(f"❌ Error loading {filename}: {e}")
+
+    return all_chunks
