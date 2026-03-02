@@ -36,17 +36,28 @@ function Register() {
 
     // 2. Integration Logic (Connecting to Python Backend)
     try {
+<<<<<<< HEAD
       const response = await fetch('http://127.0.0.1:8000/auth/register', {
+=======
+      const response = await fetch('http://127.0.0.1:8000/register', {
+>>>>>>> 8cb229edfeb65a344194f3b17540956c569b8abc
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+<<<<<<< HEAD
           fullName: fullName,
           email: email,
           mobileNumber: mobile,
           password: password,
           confirmPassword: confirmPassword
+=======
+          full_name: fullName,
+          email: email,
+          mobile: mobile,
+          password: password
+>>>>>>> 8cb229edfeb65a344194f3b17540956c569b8abc
         }),
       });
 

@@ -4,7 +4,6 @@ import sys
 from datetime import datetime
 from pypdf import PdfReader
 from dotenv import load_dotenv
-
 from langchain_groq import ChatGroq
 
 load_dotenv()
@@ -24,12 +23,12 @@ def load_pdfs(folder_path="data_source"):
                 reader = PdfReader(os.path.join(folder_path, file))
                 text = " ".join([p.extract_text() for p in reader.pages if p.extract_text()])
                 
-                # --- USER STORY 3: INGESTION METADATA ---
+                # Metadata Ingestion for Traceability
                 documents.append({
-                    "chunk_id": str(uuid.uuid4()),                # Unique ID
+                    "chunk_id": str(uuid.uuid4()),
                     "text": text,
-                    "source": file,                               # Traceability
-                    "ingestion_date": datetime.now().isoformat()  # Timestamp
+                    "source": file,
+                    "ingestion_date": datetime.now().isoformat()
                 })
                 print(f"✅ Loaded: {file}")
             except Exception as e: 
@@ -44,7 +43,7 @@ def get_ai_response(query: str):
     if not llm:
         llm = ChatGroq(groq_api_key=GROQ_API_KEY, model_name="llama-3.1-8b-instant")
 
-    # Search logic
+    # Basic keyword search logic
     query_words = query.lower().split()
     relevant_sources = []
     combined_context = ""
@@ -58,12 +57,10 @@ def get_ai_response(query: str):
         combined_context = knowledge_base[0]["text"][:4000]
         relevant_sources = [knowledge_base[0]["source"]]
 
-    # --- START OF THE TRY BLOCK ---
     try:
         interaction_id = str(uuid.uuid4())
         sources = list(set(relevant_sources))
 
-        # THIS PRINT STATEMENT CREATES THE LOG YOU NEED
         print(f"\n--- METADATA LOG ---")
         print(f"ID: {interaction_id}")
         print(f"Sources: {sources}")
@@ -80,7 +77,6 @@ def get_ai_response(query: str):
                 "sources_consulted": sources
             }
         }
-    # --- YOU WERE MISSING THIS PART BELOW ---
     except Exception as e:
         print(f"❌ Error: {str(e)}")
         return {"reply": f"AI Error: {str(e)}", "metadata": {}}

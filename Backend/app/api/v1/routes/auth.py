@@ -17,7 +17,6 @@ class LoginRequest(BaseModel):
     identifier: str
     password: str
 
-
 @router.post("/register")
 async def register(payload: RegisterRequest):
     db = get_db()
@@ -41,7 +40,6 @@ async def register(payload: RegisterRequest):
     await db.users.insert_one(user_data)
     return {"message": "User registered successfully"}
 
-
 @router.post("/login")
 async def login(payload: LoginRequest):
     db = get_db()
@@ -61,7 +59,7 @@ async def login(payload: LoginRequest):
     if not verify_password(payload.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # 👉 Generate JWT Token
+    # 👉 Generate JWT Token for secure sessions
     token = create_access_token({
         "email": user["email"],
         "fullName": user["fullName"]
