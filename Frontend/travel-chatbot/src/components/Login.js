@@ -45,22 +45,14 @@ function Login() {
 
     /* ---------- BACKEND INTEGRATION ---------- */
     try {
-<<<<<<< HEAD
+      // Cleaned to use the standard /auth/login route
       const response = await fetch('http://127.0.0.1:8000/auth/login', {
-=======
-      // We send the 'identifier' as the 'email' to our Python LoginData model
-      const response = await fetch('http://127.0.0.1:8000/login', {
->>>>>>> 8cb229edfeb65a344194f3b17540956c569b8abc
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-<<<<<<< HEAD
           identifier: identifier,
-=======
-          email: identifier,
->>>>>>> 8cb229edfeb65a344194f3b17540956c569b8abc
           password: password
         }),
       });
@@ -72,11 +64,8 @@ function Login() {
         setSuccess(true);
         
         // Save the username to use in the Chatbot
-<<<<<<< HEAD
+        // Using the user.fullName path as per your recent backend updates
         localStorage.setItem("userName", data.user.fullName);
-=======
-        localStorage.setItem("userName", data.full_name);
->>>>>>> 8cb229edfeb65a344194f3b17540956c569b8abc
 
         // Wait 1 second then go to Home
         setTimeout(() => {
