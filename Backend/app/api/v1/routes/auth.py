@@ -6,6 +6,11 @@ from app.utils.jwt_helper import create_access_token
 
 router = APIRouter()
 
+
+# ============================================================
+# 🔹 Request Models
+# ============================================================
+
 class RegisterRequest(BaseModel):
     fullName: str
     email: EmailStr
@@ -13,24 +18,33 @@ class RegisterRequest(BaseModel):
     password: str
     confirmPassword: str
 
+
 class LoginRequest(BaseModel):
-    identifier: str
+    identifier: str  # email or mobile
     password: str
 
+
+# ============================================================
+# 🔹 Register Route
+# ============================================================
 
 @router.post("/register")
 async def register(payload: RegisterRequest):
     db = get_db()
+
     if db is None:
         raise HTTPException(status_code=500, detail="DB not initialized")
 
+    # Check password match
     if payload.password != payload.confirmPassword:
         raise HTTPException(status_code=400, detail="Passwords do not match")
 
+    # Check if email already exists
     existing = await db.users.find_one({"email": payload.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already exists")
 
+    # Create user
     user_data = {
         "fullName": payload.fullName,
         "email": payload.email,
@@ -39,15 +53,22 @@ async def register(payload: RegisterRequest):
     }
 
     await db.users.insert_one(user_data)
+
     return {"message": "User registered successfully"}
 
 
-@router.post("/Login")
+# ============================================================
+# 🔹 Login Route
+# ============================================================
+
+@router.post("/login")
 async def login(payload: LoginRequest):
     db = get_db()
+
     if db is None:
         raise HTTPException(status_code=500, detail="DB not initialized")
 
+    # Allow login with email OR mobile number
     user = await db.users.find_one({
         "$or": [
             {"email": payload.identifier},
@@ -61,7 +82,7 @@ async def login(payload: LoginRequest):
     if not verify_password(payload.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # 👉 Generate JWT Token
+    # 🔐 Generate JWT Token
     token = create_access_token({
         "email": user["email"],
         "fullName": user["fullName"]

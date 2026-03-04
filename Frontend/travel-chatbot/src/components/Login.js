@@ -14,30 +14,43 @@ function Login() {
     setMessage("");
     setSuccess(false);
 
+    // ---------- EMPTY CHECK ----------
     if (!identifier || !password) {
       setMessage("All fields are required");
       return;
     }
 
-    /* ✅ UNIVERSAL EMAIL VALIDATION */
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmail = identifier.includes("@");
+    const isMobile = /^\d+$/.test(identifier);
 
-    if (!emailRegex.test(identifier)) {
-      setMessage("Enter a valid email address");
+    // ---------- VALIDATION ----------
+    if (isEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(identifier)) {
+        setMessage("Enter a valid email address");
+        return;
+      }
+    } else if (isMobile) {
+      if (identifier.length !== 10) {
+        setMessage("Mobile number must contain exactly 10 digits");
+        return;
+      }
+    } else {
+      setMessage("Enter a valid Email or Mobile Number");
       return;
     }
 
-    /* ---------- BACKEND INTEGRATION ---------- */
+    // ---------- BACKEND CALL ----------
     try {
       const response = await fetch("http://127.0.0.1:8000/login", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          email: identifier,
-          password: password,
-        }),
+          identifier: identifier,
+          password: password
+        })
       });
 
       const data = await response.json();
@@ -46,17 +59,34 @@ function Login() {
         setMessage("Login successful! Redirecting...");
         setSuccess(true);
 
-        localStorage.setItem("userName", data.full_name);
+        // Save user name if exists
+        if (data.user && data.user.fullName) {
+          localStorage.setItem("userName", data.user.fullName);
+        }
 
         setTimeout(() => {
           navigate("/home");
         }, 1000);
+
       } else {
-        setMessage(data.detail || "Login failed. Check your credentials.");
+        // 🔥 HANDLE FASTAPI VALIDATION ERRORS
+        if (data.detail) {
+          if (Array.isArray(data.detail)) {
+            // If backend returns list of errors
+            const errorMessages = data.detail.map(err => err.msg);
+            setMessage(errorMessages.join(", "));
+          } else {
+            // If backend returns single string
+            setMessage(data.detail);
+          }
+        } else {
+          setMessage("Login failed. Check your credentials.");
+        }
       }
+
     } catch (error) {
       console.error("Login Error:", error);
-      setMessage("Cannot reach the server. Is Python running?");
+      setMessage("Cannot reach the server. Is Python running on port 8000?");
     }
   };
 
@@ -73,7 +103,7 @@ function Login() {
 
           <input
             type="text"
-            placeholder="Email"
+            placeholder="Email or Mobile Number"
             value={identifier}
             autoComplete="off"
             onChange={(e) => setIdentifier(e.target.value.trim())}

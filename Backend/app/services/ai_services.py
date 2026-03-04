@@ -1,54 +1,58 @@
 import os
 import uuid
-import sys
-from unittest.mock import MagicMock
 from datetime import datetime
-from PyPDF2 import PdfReader
 from dotenv import load_dotenv
-
-# Shield against broken Windows DLLs
-sys.modules["torch"] = MagicMock()
-sys.modules["transformers"] = MagicMock()
+from pypdf import PdfReader
 
 from langchain_groq import ChatGroq
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+
+# ============================================
+# 🔹 Load Environment Variables
+# ============================================
 
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 knowledge_base = []
+vector_db = None
 llm = None
+
+
+# ============================================
+# 🔹 STEP 1: Load PDFs (User Story 3 - Metadata)
+# ============================================
 
 def load_pdfs(folder_path="data_source"):
     documents = []
+
     if not os.path.exists(folder_path):
         print(f"❌ Folder {folder_path} not found!")
         return documents
+
     for file in os.listdir(folder_path):
         if file.endswith(".pdf"):
-<<<<<<< HEAD
-=======
-            file_path = os.path.join(folder_path, file)
-
->>>>>>> e1bfd89 (Completed full project implementation)
             try:
                 reader = PdfReader(os.path.join(folder_path, file))
-                text = " ".join([p.extract_text() for p in reader.pages if p.extract_text()])
-                
-                # --- USER STORY 3: INGESTION METADATA ---
+                text = " ".join(
+                    [page.extract_text() for page in reader.pages if page.extract_text()]
+                )
+
                 documents.append({
-                    "chunk_id": str(uuid.uuid4()),                # Unique ID
+                    "doc_id": str(uuid.uuid4()),
                     "text": text,
-                    "source": file,                               # Traceability
-                    "ingestion_date": datetime.now().isoformat()  # Timestamp
+                    "source": file,
+                    "ingestion_date": datetime.now().isoformat()
                 })
+
                 print(f"✅ Loaded: {file}")
-            except Exception as e: 
+
+            except Exception as e:
                 print(f"⚠️ Error loading {file}: {e}")
-                continue
+
     return documents
 
-<<<<<<< HEAD
-=======
 
 # ============================================
 # 🔹 STEP 2: Chunk Documents
@@ -66,17 +70,14 @@ def chunk_documents(documents, chunk_size=500, overlap=100):
 
         while start < len(words):
             end = start + chunk_size
-            chunk_words = words[start:end]
+            chunk_text = " ".join(words[start:end])
 
-            chunk_text = " ".join(chunk_words)
-
-            chunk_data = {
+            all_chunks.append({
                 "chunk_id": f"{source}_chunk_{chunk_number}",
                 "text": chunk_text,
-                "source": source
-            }
-
-            all_chunks.append(chunk_data)
+                "source": source,
+                "doc_id": doc["doc_id"]
+            })
 
             start += (chunk_size - overlap)
             chunk_number += 1
@@ -86,7 +87,7 @@ def chunk_documents(documents, chunk_size=500, overlap=100):
 
 
 # ============================================
-# 🔹 STEP 3: Initialize RAG
+# 🔹 STEP 3: Initialize RAG System
 # ============================================
 
 def initialize_rag():
@@ -106,7 +107,8 @@ def initialize_rag():
         metadatas = [
             {
                 "chunk_id": chunk["chunk_id"],
-                "source": chunk["source"]
+                "source": chunk["source"],
+                "doc_id": chunk["doc_id"]
             }
             for chunk in chunks
         ]
@@ -119,12 +121,12 @@ def initialize_rag():
             metadatas=metadatas
         )
     else:
-        print("⚠ No documents found. Running in AI-only mode.")
+        print("⚠ No documents found. Running AI-only mode.")
         vector_db = None
 
     llm = ChatGroq(
         groq_api_key=GROQ_API_KEY,
-        temperature=0.2,  # Lower temperature for grounded answers
+        temperature=0.2,
         model_name="llama-3.1-8b-instant"
     )
 
@@ -132,29 +134,25 @@ def initialize_rag():
 
 
 # ============================================
-# 🔹 STEP 4: Structured RAG Prompt Builder (US-8 Core)
+# 🔹 STEP 4: Structured RAG Prompt (Strict Mode)
 # ============================================
 
 def build_rag_prompt(question, retrieved_docs):
-    """
-    Build structured RAG prompt for context injection.
-    Ensures grounded and hallucination-free responses.
-    """
-
     context_text = "\n\n".join(
-        [f"[Source: {doc.metadata.get('source')}]\n{doc.page_content}"
-         for doc in retrieved_docs]
+        [
+            f"[Source: {doc.metadata.get('source')}]\n{doc.page_content}"
+            for doc in retrieved_docs
+        ]
     )
 
     prompt = f"""
 You are a professional AI assistant.
 
-IMPORTANT INSTRUCTIONS:
+IMPORTANT RULES:
 - Answer ONLY using the provided document context.
 - Do NOT use outside knowledge.
-- If the answer is not found in the context, say:
+- If answer is not found in context, say:
   "I don't have enough information in the provided documents."
-- Keep the answer clear, structured, and professional.
 
 =======================
 DOCUMENT CONTEXT:
@@ -175,102 +173,63 @@ FINAL ANSWER:
 
 
 # ============================================
-# 🔹 STEP 5: Get AI Response (Updated RAG Core)
+# 🔹 STEP 5: Get AI Response (Final Combined Version)
 # ============================================
 
->>>>>>> e1bfd89 (Completed full project implementation)
 def get_ai_response(query: str):
-    global knowledge_base, llm
-    if not knowledge_base:
-        knowledge_base = load_pdfs("data_source")
-    if not llm:
-        llm = ChatGroq(groq_api_key=GROQ_API_KEY, model_name="llama-3.1-8b-instant")
+    global vector_db, llm
 
-<<<<<<< HEAD
-    # Search logic
-    query_words = query.lower().split()
-    relevant_sources = []
-    combined_context = ""
-
-    for doc in knowledge_base:
-        if any(word in doc["text"].lower() for word in query_words):
-            combined_context += doc["text"][:2000] + "\n\n"
-            relevant_sources.append(doc["source"])
-
-    if not combined_context and knowledge_base:
-        combined_context = knowledge_base[0]["text"][:4000]
-        relevant_sources = [knowledge_base[0]["source"]]
-
-    # --- START OF THE TRY BLOCK ---
-    try:
-        interaction_id = str(uuid.uuid4())
-        sources = list(set(relevant_sources))
-=======
     if not llm:
         initialize_rag()
 
-    try:
-        # 🔎 Retrieve top 3 documents
-        retrieved_docs = []
+    interaction_id = str(uuid.uuid4())
+    timestamp = datetime.now().isoformat()
 
+    retrieved_docs = []
+    sources = []
+
+    try:
+        # 🔎 Retrieve top 3 similar chunks
         if vector_db:
             docs_with_scores = vector_db.similarity_search_with_score(query, k=3)
 
             print("\n--- Similarity Scores ---")
             for doc, score in docs_with_scores:
-                print("Score:", score)
-
-            # Keep reasonably relevant matches
+                print(f"Score: {score}")
+            
             retrieved_docs = [
                 doc for doc, score in docs_with_scores if score < 1.5
             ]
 
-        # ============================================
-        # ✅ STRICT RAG MODE (Context Injection)
-        # ============================================
+            sources = list(set([doc.metadata.get("source") for doc in retrieved_docs]))
 
+        # Strict RAG Mode
         if retrieved_docs:
             prompt = build_rag_prompt(query, retrieved_docs)
+            response = llm.invoke(prompt)
+            reply_text = response.content
         else:
-            # If no documents matched → safe fallback
-            prompt = f"""
-You are a professional assistant.
+            reply_text = "I don't have enough information in the provided documents."
 
-No relevant documents were found.
-Inform the user politely that the system does not have sufficient document information to answer this question.
-
-Question:
-{query}
-"""
-
-        response = llm.invoke(prompt)
-
-        return response.content
->>>>>>> e1bfd89 (Completed full project implementation)
-
-        # THIS PRINT STATEMENT CREATES THE LOG YOU NEED
-        print(f"\n--- METADATA LOG ---")
-        print(f"ID: {interaction_id}")
-        print(f"Sources: {sources}")
-        print(f"-------------------\n")
-
-        prompt = f"Using this context:\n{combined_context}\n\nQuestion: {query}"
-        response = llm.invoke(prompt)
+        # 🧾 METADATA LOG (Your feature retained)
+        print("\n--- METADATA LOG ---")
+        print(f"Interaction ID: {interaction_id}")
+        print(f"Timestamp: {timestamp}")
+        print(f"Sources Consulted: {sources}")
+        print("--------------------\n")
 
         return {
-            "reply": response.content,
+            "reply": reply_text,
             "metadata": {
                 "interaction_uuid": interaction_id,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": timestamp,
                 "sources_consulted": sources
             }
         }
-    # --- YOU WERE MISSING THIS PART BELOW ---
+
     except Exception as e:
-<<<<<<< HEAD
         print(f"❌ Error: {str(e)}")
-        return {"reply": f"AI Error: {str(e)}", "metadata": {}}
-=======
-        print(f"❌ LLM Error: {e}")
-        return "I'm having trouble connecting to the AI right now. Please try again."
->>>>>>> e1bfd89 (Completed full project implementation)
+        return {
+            "reply": f"AI Error: {str(e)}",
+            "metadata": {}
+        }

@@ -1,33 +1,63 @@
 # ============================================================
 # 🔹 Text Chunker Utility
-# Responsible for splitting large text into overlapping chunks
+# Responsible for splitting documents into overlapping chunks
 # ============================================================
 
-def chunk_text(text, chunk_size=500, overlap=100):
+import uuid
+from datetime import datetime
+from typing import List, Dict, Any
+
+
+def chunk_documents(
+    documents: List[Dict[str, Any]],
+    chunk_size: int = 500,
+    overlap: int = 100,
+) -> List[Dict[str, Any]]:
     """
-    Splits text into chunks with overlap.
+    Chunks documents into smaller overlapping pieces for vector embedding.
 
-    Parameters:
-    - text (str): Full cleaned text
-    - chunk_size (int): Number of words per chunk
-    - overlap (int): Number of overlapping words
-
-    Returns:
-    - List of chunk strings
+    Expected input format:
+    documents = [
+        {
+            "text": "Extracted text here...",
+            "source": "filename.pdf",
+            "file_type": "pdf"
+        }
+    ]
     """
 
-    words = text.split()
-    chunks = []
+    all_chunks: List[Dict[str, Any]] = []
 
-    start = 0
+    for doc in documents:
+        words = doc["text"].split()
 
-    while start < len(words):
-        end = start + chunk_size
-        chunk_words = words[start:end]
+        source = doc.get("source", "unknown")
+        file_type = doc.get("file_type", "unknown")
 
-        chunk = " ".join(chunk_words)
-        chunks.append(chunk)
+        start = 0
+        chunk_number = 1
 
-        start += (chunk_size - overlap)
+        while start < len(words):
+            end = start + chunk_size
+            chunk_words = words[start:end]
 
-    return chunks
+            chunk_text = " ".join(chunk_words)
+
+            chunk_data = {
+                "chunk_id": str(uuid.uuid4()),  # ✅ Unique ID
+                "content": chunk_text,          # ✅ Used by embedding service
+                "metadata": {
+                    "source": source,
+                    "file_type": file_type,
+                    "chunk_number": chunk_number,
+                    "created_at": datetime.now().isoformat(),
+                },
+            }
+
+            all_chunks.append(chunk_data)
+
+            # Move start forward with overlap
+            start += (chunk_size - overlap)
+            chunk_number += 1
+
+    return all_chunks
