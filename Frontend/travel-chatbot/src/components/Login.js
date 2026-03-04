@@ -1,16 +1,16 @@
 import React, { useState } from "react";
 import "./Login.css";
-import { Link, useNavigate } from "react-router-dom"; // Added useNavigate
+import { Link, useNavigate } from "react-router-dom";
 
 function Login() {
-  const [identifier, setIdentifier] = useState(""); 
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
-  
-  const navigate = useNavigate(); // Hook for redirection
 
-  const handleLogin = async () => { // Changed to async
+  const navigate = useNavigate();
+
+  const handleLogin = async () => {
     setMessage("");
     setSuccess(false);
 
@@ -19,41 +19,24 @@ function Login() {
       return;
     }
 
-    const isEmail = identifier.includes("@");
-    const isMobile = /^\d+$/.test(identifier);
+    /* ✅ UNIVERSAL EMAIL VALIDATION */
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    /* ---------- VALIDATION ---------- */
-    if (isEmail) {
-      if (!/^[a-zA-Z]/.test(identifier)) {
-        setMessage("Email must start with alphabets");
-        return;
-      }
-      const emailRegex = /^[a-zA-Z][a-zA-Z0-9._]*@gmail\.com$/;
-      if (!emailRegex.test(identifier)) {
-        setMessage("Enter email in valid format (example: abc@gmail.com)");
-        return;
-      }
-    } else if (isMobile) {
-      if (identifier.length !== 10) {
-        setMessage("Mobile number must contain exactly 10 digits");
-        return;
-      }
-    } else {
-      setMessage("Enter a valid Email or Mobile Number");
+    if (!emailRegex.test(identifier)) {
+      setMessage("Enter a valid email address");
       return;
     }
 
     /* ---------- BACKEND INTEGRATION ---------- */
     try {
-      // We send the 'identifier' as the 'email' to our Python LoginData model
-      const response = await fetch('http://127.0.0.1:8000/login', {
-        method: 'POST',
+      const response = await fetch("http://127.0.0.1:8000/login", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email: identifier,
-          password: password
+          password: password,
         }),
       });
 
@@ -62,11 +45,9 @@ function Login() {
       if (response.ok) {
         setMessage("Login successful! Redirecting...");
         setSuccess(true);
-        
-        // Save the username to use in the Chatbot
+
         localStorage.setItem("userName", data.full_name);
 
-        // Wait 1 second then go to Home
         setTimeout(() => {
           navigate("/home");
         }, 1000);
@@ -75,7 +56,7 @@ function Login() {
       }
     } catch (error) {
       console.error("Login Error:", error);
-      setMessage("Cannot reach the server. Is Python running on port 8000?");
+      setMessage("Cannot reach the server. Is Python running?");
     }
   };
 
@@ -92,7 +73,7 @@ function Login() {
 
           <input
             type="text"
-            placeholder="Email or Mobile Number"
+            placeholder="Email"
             value={identifier}
             autoComplete="off"
             onChange={(e) => setIdentifier(e.target.value.trim())}
@@ -109,7 +90,7 @@ function Login() {
           <button onClick={handleLogin}>Login</button>
 
           <div className="forgot-password">Forgot Password?</div>
-          
+
           <p className="register-text">
             Don’t have an account?{" "}
             <Link to="/register" className="register-link">

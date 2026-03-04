@@ -1,36 +1,33 @@
-import uuid
+# ============================================================
+# 🔹 Text Chunker Utility
+# Responsible for splitting large text into overlapping chunks
+# ============================================================
 
-def chunk_documents(documents, chunk_size=500, overlap=100):
+def chunk_text(text, chunk_size=500, overlap=100):
     """
-    documents = [
-        {"text": "...", "source": "file.pdf"}
-    ]
+    Splits text into chunks with overlap.
+
+    Parameters:
+    - text (str): Full cleaned text
+    - chunk_size (int): Number of words per chunk
+    - overlap (int): Number of overlapping words
+
+    Returns:
+    - List of chunk strings
     """
 
-    all_chunks = []
+    words = text.split()
+    chunks = []
 
-    for doc in documents:
-        words = doc["text"].split()
-        source = doc["source"]
+    start = 0
 
-        start = 0
-        chunk_number = 1
+    while start < len(words):
+        end = start + chunk_size
+        chunk_words = words[start:end]
 
-        while start < len(words):
-            end = start + chunk_size
-            chunk_words = words[start:end]
+        chunk = " ".join(chunk_words)
+        chunks.append(chunk)
 
-            chunk_text = " ".join(chunk_words)
+        start += (chunk_size - overlap)
 
-            chunk_data = {
-                "chunk_id": f"{source}_chunk_{chunk_number}",
-                "text": chunk_text,
-                "source": source
-            }
-
-            all_chunks.append(chunk_data)
-
-            start += (chunk_size - overlap)
-            chunk_number += 1
-
-    return all_chunks
+    return chunks

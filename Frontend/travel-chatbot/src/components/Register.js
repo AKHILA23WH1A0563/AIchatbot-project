@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./Register.css";
-import { Link, useNavigate } from "react-router-dom"; // Added useNavigate for redirection
+import { Link, useNavigate } from "react-router-dom";
 
 function Register() {
   const [fullName, setFullName] = useState("");
@@ -8,24 +8,52 @@ function Register() {
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [otp, setOtp] = useState("");
+  const [showOtpField, setShowOtpField] = useState(false);
+
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
-  
-  const navigate = useNavigate(); // Hook to change pages after success
 
+  const navigate = useNavigate();
+
+  // ================= EMAIL VALIDATION =================
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // ================= PASSWORD VALIDATION =================
+  const validatePassword = (password) => {
+    const passwordRegex =
+      /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&]).{6,}$/;
+    return passwordRegex.test(password);
+  };
+
+  // ================= REGISTER FUNCTION =================
   const handleRegister = async () => {
     setMessage("");
     setSuccess(false);
 
-    // 1. Validation Logic
-    if (!fullName || !email || !password || !confirmPassword) {
+    if (!fullName || !email || !mobile || !password || !confirmPassword) {
       setMessage("Please fill all mandatory fields");
       return;
     }
 
-    const emailRegex = /^[a-zA-Z][a-zA-Z0-9._]*@gmail\.com$/;
-    if (!emailRegex.test(email)) {
+    if (!validateEmail(email)) {
       setMessage("Enter a valid email address");
+      return;
+    }
+
+    if (mobile.length !== 10) {
+      setMessage("Mobile number must be exactly 10 digits");
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      setMessage(
+        "Password must be at least 6 characters and include letter, number & special character"
+      );
       return;
     }
 
@@ -34,18 +62,50 @@ function Register() {
       return;
     }
 
-    // 2. Integration Logic (Connecting to Python Backend)
     try {
-      const response = await fetch('http://127.0.0.1:8000/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch("http://127.0.0.1:8000/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           full_name: fullName,
           email: email,
           mobile: mobile,
-          password: password
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage("OTP sent! Check backend console.");
+        setSuccess(true);
+        setShowOtpField(true);
+      } else {
+        handleBackendError(data);
+      }
+    } catch (error) {
+      console.error("Connection Error:", error);
+      setMessage("Backend server not reachable.");
+    }
+  };
+
+  // ================= VERIFY OTP FUNCTION =================
+  const handleVerifyOtp = async () => {
+    setMessage("");
+    setSuccess(false);
+
+    if (!otp) {
+      setMessage("Enter OTP");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email,
+          otp: otp,
         }),
       });
 
@@ -54,25 +114,29 @@ function Register() {
       if (response.ok) {
         setMessage("Registration successful! Redirecting to login...");
         setSuccess(true);
-        
-        // Clear fields
-        setFullName("");
-        setEmail("");
-        setMobile("");
-        setPassword("");
-        setConfirmPassword("");
 
-        // Move to login page after 2 seconds
         setTimeout(() => {
           navigate("/login");
         }, 2000);
       } else {
-        // Show the error message from the Python Backend
-        setMessage(data.detail || "Registration failed");
+        handleBackendError(data);
       }
     } catch (error) {
-      console.error("Connection Error:", error);
-      setMessage("Backend server not reached. Check if Python is running on port 8000.");
+      console.error("OTP Error:", error);
+      setMessage("OTP verification failed.");
+    }
+  };
+
+  // ================= HANDLE BACKEND ERRORS =================
+  const handleBackendError = (data) => {
+    if (data?.detail) {
+      if (Array.isArray(data.detail)) {
+        setMessage(data.detail[0].msg);
+      } else {
+        setMessage(data.detail);
+      }
+    } else {
+      setMessage("Something went wrong");
     }
   };
 
@@ -87,7 +151,7 @@ function Register() {
         <h1>Create Account</h1>
 
         <div className="field">
-          <label>Full Name <span className="required">*</span></label>
+          <label>Full Name *</label>
           <input
             type="text"
             placeholder="Enter full name"
@@ -97,7 +161,7 @@ function Register() {
         </div>
 
         <div className="field">
-          <label>Email <span className="required">*</span></label>
+          <label>Email *</label>
           <input
             type="email"
             placeholder="Enter email"
@@ -107,27 +171,30 @@ function Register() {
         </div>
 
         <div className="field">
-          <label>Mobile Number</label>
+          <label>Mobile *</label>
           <input
             type="text"
-            placeholder="10-digit mobile number (optional)"
+            placeholder="10-digit mobile number"
             value={mobile}
-            onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
+            onChange={(e) =>
+              setMobile(e.target.value.replace(/\D/g, ""))
+            }
+            maxLength="10"
           />
         </div>
 
         <div className="field">
-          <label>Password <span className="required">*</span></label>
+          <label>Password *</label>
           <input
             type="password"
-            placeholder="Enter password"
+            placeholder="Minimum 6 chars (letter, number & special)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
 
         <div className="field">
-          <label>Confirm Password <span className="required">*</span></label>
+          <label>Confirm Password *</label>
           <input
             type="password"
             placeholder="Re-enter password"
@@ -136,11 +203,32 @@ function Register() {
           />
         </div>
 
-        <button onClick={handleRegister}>Register</button>
+        {!showOtpField ? (
+          <button onClick={handleRegister}>Register</button>
+        ) : (
+          <>
+            <div className="field">
+              <label>Enter OTP *</label>
+              <input
+                type="text"
+                placeholder="Enter 6-digit OTP"
+                value={otp}
+                onChange={(e) =>
+                  setOtp(e.target.value.replace(/\D/g, ""))
+                }
+                maxLength="6"
+              />
+            </div>
+
+            <button onClick={handleVerifyOtp}>Verify OTP</button>
+          </>
+        )}
 
         <p className="login-link">
           Already have an account?{" "}
-          <Link to="/login" className="login-link-text">Login</Link>
+          <Link to="/login" className="login-link-text">
+            Login
+          </Link>
         </p>
 
         {message && (

@@ -21,6 +21,7 @@ def ingest_all_sources():
                 for page in reader.pages:
                     text += page.extract_text()
 
+<<<<<<< HEAD
                 # --- METADATA MANAGEMENT LOGIC ---
                 # We create a dictionary for the chunk with Unique ID and Timestamp
                 chunk = {
@@ -39,3 +40,7 @@ def ingest_all_sources():
                 print(f"❌ Error loading {filename}: {e}")
 
     return all_chunks
+=======
+    combined = (pdf_text or "") + "\n\n" + (url_text or "")
+    return clean_text(combined)
+>>>>>>> e1bfd89 (Completed full project implementation)
