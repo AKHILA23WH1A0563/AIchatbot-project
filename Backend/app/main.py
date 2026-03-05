@@ -6,6 +6,7 @@ import uvicorn
 # Import the AI service and routers
 from app.services.ai_services import get_ai_response
 from app.api.v1.router import api_router
+from app.api.v1.routes import auth  # Import auth separately
 from app.db.database import connect_to_mongo, close_mongo_connection
 
 app = FastAPI(title="AI Travel Chatbot") 
@@ -19,8 +20,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include the modular API routers
-app.include_router(api_router)
+# Include the modular API routers with /api/v1 prefix
+app.include_router(api_router, prefix="/api/v1")
+
+# Add auth routes without prefix for frontend compatibility
+app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 
 # Database lifecycle management
 @app.on_event("startup")

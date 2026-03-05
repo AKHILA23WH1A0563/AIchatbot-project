@@ -4,22 +4,13 @@ from bson import ObjectId
 from datetime import datetime
 from app.db.database import get_db
 from app.api.deps import get_current_user
+from app.services.ai_services import get_ai_response
 
 router = APIRouter()
 
 class ChatbotMessageRequest(BaseModel):
     conversationId: str
     text: str
-
-def travel_logic(query: str) -> str:
-    q = query.lower()
-
-    if "paris" in q:
-        return "Paris: Visit Eiffel Tower, Louvre, Arc de Triomphe!"
-    if "flight" in q:
-        return "Check Skyscanner or Google Flights for the cheapest flights."
-
-    return "I didn't understand your question. Try asking differently!"
 
 @router.post("/message")
 async def chatbot_message(
@@ -28,7 +19,6 @@ async def chatbot_message(
 ):
     db = get_db()
     if db is None:
-
         raise HTTPException(status_code=500, detail="DB not initialized")
 
     try:
@@ -48,18 +38,23 @@ async def chatbot_message(
         "created_at": datetime.utcnow()
     })
 
-    bot_reply = travel_logic(payload.text)
+    # RAG-based AI response with semantic search
+    ai_result = get_ai_response(payload.text)
+    bot_reply = ai_result.get("reply", "Sorry, I couldn't process your request.")
+    metadata = ai_result.get("metadata", {})
 
-    # Save bot reply
+    # Save bot reply with metadata
     await db.messages.insert_one({
         "conversationId": conv_oid,
         "sender": "bot",
         "text": bot_reply,
+        "metadata": metadata,
         "created_at": datetime.utcnow()
     })
 
     return {
         "conversationId": payload.conversationId,
         "sender": "bot",
-        "reply": bot_reply
+        "reply": bot_reply,
+        "metadata": metadata
     }
