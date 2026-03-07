@@ -18,17 +18,21 @@ async def connect_to_mongo():
     print("✅ Connected to MongoDB")
 
     # ========================================================
-    # 🔥 Optimized Indexes (Improves Retrieval Performance)
+    # 🔥 Optimized Indexes
     # ========================================================
 
-    # Unique chunk ID (prevents duplicate inserts)
+    # RAG chunks collection indexes
     await db.chunks.create_index("chunk_id", unique=True)
-
-    # Helps filter/search by document source
     await db.chunks.create_index("metadata.source")
-
-    # Helps filter by file type if needed
     await db.chunks.create_index("metadata.file_type")
+
+    # ========================================================
+    # 🧠 Chat History Indexes
+    # ========================================================
+
+    await db.chat_history.create_index("user_id")
+    await db.chat_history.create_index("session_id")
+    await db.chat_history.create_index("timestamp")
 
     print("📦 MongoDB indexes ensured")
 
