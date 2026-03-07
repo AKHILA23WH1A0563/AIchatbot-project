@@ -8,6 +8,7 @@ from langchain_groq import ChatGroq
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
+
 # ============================================
 # 🔹 Load Environment Variables
 # ============================================
@@ -21,7 +22,7 @@ llm = None
 
 
 # ============================================
-# 🔹 STEP 1: Load PDFs (User Story 3 - Metadata)
+# 🔹 STEP 1: Load PDFs
 # ============================================
 
 def load_pdfs(folder_path="data_source"):
@@ -104,6 +105,7 @@ def initialize_rag():
 
     if chunks:
         texts = [chunk["text"] for chunk in chunks]
+
         metadatas = [
             {
                 "chunk_id": chunk["chunk_id"],
@@ -120,8 +122,9 @@ def initialize_rag():
             embedding=embeddings,
             metadatas=metadatas
         )
+
     else:
-        print("⚠ No documents found. Running AI-only mode.")
+        print("⚠ No documents found.")
         vector_db = None
 
     llm = ChatGroq(
@@ -134,10 +137,11 @@ def initialize_rag():
 
 
 # ============================================
-# 🔹 STEP 4: Structured RAG Prompt (Strict Mode)
+# 🔹 STEP 4: Improved RAG Prompt
 # ============================================
 
 def build_rag_prompt(question, retrieved_docs):
+
     context_text = "\n\n".join(
         [
             f"[Source: {doc.metadata.get('source')}]\n{doc.page_content}"
@@ -146,34 +150,38 @@ def build_rag_prompt(question, retrieved_docs):
     )
 
     prompt = f"""
-You are a professional AI assistant.
+You are an AI travel assistant.
 
 IMPORTANT RULES:
-- Answer ONLY using the provided document context.
-- Do NOT use outside knowledge.
-- If answer is not found in context, say:
-  "I don't have enough information in the provided documents."
+- Answer ONLY from the provided document context.
+- Keep the answer SHORT and CLEAR.
+- Use numbered bullet points.
+- Maximum 5 points.
+- Each point should be 1 short sentence.
+- Do NOT write long paragraphs.
+- If the answer is not found, say:
+"I don't have enough information in the provided documents."
 
-=======================
-DOCUMENT CONTEXT:
-=======================
+=====================
+DOCUMENT CONTEXT
+=====================
 {context_text}
 
-=======================
-USER QUESTION:
-=======================
+=====================
+QUESTION
+=====================
 {question}
 
-=======================
-FINAL ANSWER:
-=======================
+=====================
+SHORT ANSWER
+=====================
 """
 
     return prompt
 
 
 # ============================================
-# 🔹 STEP 5: Get AI Response (Final Combined Version)
+# 🔹 STEP 5: Get AI Response
 # ============================================
 
 def get_ai_response(query: str):
@@ -189,29 +197,30 @@ def get_ai_response(query: str):
     sources = []
 
     try:
-        # 🔎 Retrieve top 3 similar chunks
+
         if vector_db:
             docs_with_scores = vector_db.similarity_search_with_score(query, k=3)
 
             print("\n--- Similarity Scores ---")
             for doc, score in docs_with_scores:
                 print(f"Score: {score}")
-            
+
             retrieved_docs = [
                 doc for doc, score in docs_with_scores if score < 1.5
             ]
 
             sources = list(set([doc.metadata.get("source") for doc in retrieved_docs]))
 
-        # Strict RAG Mode
         if retrieved_docs:
+
             prompt = build_rag_prompt(query, retrieved_docs)
             response = llm.invoke(prompt)
             reply_text = response.content
+            reply_text = reply_text.replace(". ", ".\n")
+
         else:
             reply_text = "I don't have enough information in the provided documents."
 
-        # 🧾 METADATA LOG (Your feature retained)
         print("\n--- METADATA LOG ---")
         print(f"Interaction ID: {interaction_id}")
         print(f"Timestamp: {timestamp}")
@@ -229,6 +238,7 @@ def get_ai_response(query: str):
 
     except Exception as e:
         print(f"❌ Error: {str(e)}")
+
         return {
             "reply": f"AI Error: {str(e)}",
             "metadata": {}
