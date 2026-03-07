@@ -1,179 +1,89 @@
-# AI Chatbot Project (RAG-Ready Architecture)
+# Getting Started with Create React App
 
-## Project Overview
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-This project is a full-stack AI Chatbot application with a clean separation of backend and frontend. The backend is built using Flask with a modular MVC-style architecture, and the frontend is built using React.
+## Available Scripts
 
-The system includes authentication, chat handling, and a structured RAG preprocessing pipeline implemented up to the content chunking stage.
+In the project directory, you can run:
 
----
+### `npm start`
 
-## Project Structure
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-```
-AIchatbot-project-main/
-│
-├── backend/
-│   ├── src/
-│   │   ├── config/          # Database configuration
-│   │   ├── controllers/     # Business logic (auth, chat)
-│   │   ├── middleware/      # Authentication & request middleware
-│   │   ├── models/          # MongoDB models (schemas)
-│   │   ├── routes/          # API route definitions (Blueprints)
-│   │   ├── services/        # RAG processing (extraction, cleaning, chunking)
-│   │   ├── __init__.py
-│   │   └── app.py           # Flask application entry point
-│   ├── requirements.txt     # Backend dependencies
-│   └── .env                 # Environment variables
-│
-├── frontend/
-│   └── travel-chatbot/
-│       ├── public/
-│       ├── src/
-│       ├── package.json
-│       └── package-lock.json
-│
-├── architecture_diagram.png
-└── README.md
-```
+The page will reload when you make changes.\
+You may also see any lint errors in the console.
 
----
+### `npm test`
 
-## Backend Details
+Launches the test runner in the interactive watch mode.\
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-### Technology Stack
+### `npm run build`
 
-- Flask
-- MongoEngine
-- Flask-CORS
-- PyJWT
-- Python-dotenv
-- PyPDF2
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
 
-### Backend Architecture
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!
 
-The backend follows a modular architecture:
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-- Models: MongoDB schemas
-- Controllers: Business logic
-- Routes: API endpoints using Flask Blueprints
-- Middleware: Authentication and request validation
-- Services: RAG preprocessing logic
+### `npm run eject`
 
----
+**Note: this is a one-way operation. Once you `eject`, you can't go back!**
 
-## Running the Backend
+If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-From the project root:
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
 
-```bat
-cd backend
-pip install -r requirements.txt
-python -m src.app
-```
+You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
 
-Expected output:
+## Learn More
 
-```
-Running on http://0.0.0.0:5000
-```
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
----
+To learn React, check out the [React documentation](https://reactjs.org/).
 
-## Frontend Details
+### Code Splitting
 
-### Technology Stack
+This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
 
-- React
-- JavaScript / HTML / CSS
-- Axios / Fetch API
+### Analyzing the Bundle Size
 
----
+This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
 
-## Running the Frontend
+### Making a Progressive Web App
 
-Open a new terminal:
+This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
 
-```bat
-cd frontend\travel-chatbot
-npm install
-npm start
-```
+### Advanced Configuration
 
-The application will start at:
+This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
 
-```
-http://localhost:3000
-```
+### Deployment
 
----
+This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
 
-## Authentication APIs
+### `npm run build` fails to minify
 
-| Method | Endpoint        | Description        |
-|--------|----------------|--------------------|
-| POST   | /auth/register | User registration  |
-| POST   | /auth/login    | User login         |
+This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
 
----
+## Project Updates
 
-## RAG Preprocessing Pipeline (Implemented)
+### User Story 10 – Chat Message Persistence (Completed)
 
-The project includes a RAG preprocessing module implemented up to content chunking.
+As a user, I want my conversations to be saved automatically, so that I can refer back to them anytime.
 
-### Workflow
+**Implementation Details:**
+- Created a **chat_history** collection in MongoDB.
+- Stored the following fields for each chat message:
+  - `user_id`
+  - `session_id`
+  - `query`
+  - `response`
+  - `timestamp`
+- Saved **LLM responses along with source references**.
+- Implemented **automatic storage of chat history after every LLM response**.
 
-Data Source → Text Extraction → Text Cleaning → Chunking
-
----
-
-## Step 1: Text Extraction
-
-- Extracts page-wise text from PDF files
-- Extracts full content from text files
-- Preserves page number metadata
-
----
-
-## Step 2: Text Cleaning
-
-
-- Removes extra whitespace
-- Normalizes formatting
-- Removes unwanted special characters
-- Maintains structured content
-
----
-
-## Step 3: Content Chunking
-
-Extracted text is divided into smaller segments for efficient processing.
-
-### Chunking Strategy
-
-- Fixed chunk size (e.g., 500 characters)
-- Overlapping chunks (e.g., 100 characters overlap)
-- Unique chunk IDs generated
-- Source file name retained
-- Page number metadata retained
-
-### Sample Chunk Structure
-
-```json
-{
-  "chunk_id": "document_chunk_01",
-  "content": "Sample chunk text...",
-  "source": "file_name.pdf",
-  "page_number": 2
-}
-```
-
----
-
-## Status
-
-Backend and frontend integrated  
-Authentication implemented  
-Document extraction completed  
-Text cleaning completed  
-Content chunking with metadata completed  
+This feature enables users to **view and refer to previous conversations anytime**, improving the usability and continuity of the chatbot.
