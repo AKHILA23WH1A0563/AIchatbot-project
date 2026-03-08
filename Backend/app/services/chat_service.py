@@ -4,7 +4,7 @@ from app.services.context_memory import (
     rewrite_query,
     trim_chat_history_by_token_limit
 )
-from app.services.ai_services import generate_answer
+from app.services.ai_services import get_ai_response
 from app.services.chat_history_service import save_chat_history
 
 
@@ -20,9 +20,8 @@ async def handle_chat(user_id: str, session_id: str, query: str):
 
     rewritten_query = rewrite_query(query, history_docs)
 
-    result = generate_answer(
+    result = get_ai_response(
         query=rewritten_query,
-        chat_history=chat_history,
         top_k=3
     )
 

@@ -8,7 +8,56 @@ function Home() {
   ]);
   const [isDarkTheme, setIsDarkTheme] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const [userId] = useState(localStorage.getItem("userId") || "user_" + Math.random().toString(36).substr(2, 9));
+  const [sessions, setSessions] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const chatWindowRef = useRef(null);
+
+  // Save userId to localStorage
+  useEffect(() => {
+    localStorage.setItem("userId", userId);
+  }, [userId]);
+
+  // Load sessions and restore last session on mount
+  useEffect(() => {
+    loadSessions();
+    restoreLastSession();
+  }, [userId]);
+
+  const restoreLastSession = async () => {
+    const lastSessionId = localStorage.getItem("lastSessionId");
+    if (lastSessionId) {
+      setIsLoadingHistory(true);
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/chat/history/${lastSessionId}`);
+        const data = await response.json();
+        
+        if (data.messages && data.messages.length > 0) {
+          const loadedMessages = data.messages.map(msg => ([
+            { text: msg.query, sender: "user" },
+            { text: msg.response, sender: "ai" }
+          ])).flat();
+          
+          setMessages(loadedMessages);
+          setSessionId(lastSessionId);
+        }
+      } catch (error) {
+        console.error("Error restoring session:", error);
+      }
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const loadSessions = async () => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/chat/sessions/${userId}`);
+      const data = await response.json();
+      setSessions(data.sessions || []);
+    } catch (error) {
+      console.error("Error loading sessions:", error);
+    }
+  };
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -31,7 +80,7 @@ function Home() {
           <div key={index} className="list-item numbered" dangerouslySetInnerHTML={{ __html: processedLine }} />
         );
       }
-      else if (/^[\-\•\*]\s/.test(line)) {
+      else if (/^[-•*]\s/.test(line)) {
         return (
           <div key={index} className="list-item bullet" dangerouslySetInnerHTML={{ __html: processedLine }} />
         );
@@ -66,10 +115,21 @@ function Home() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ message: currentQuestion }),
+          body: JSON.stringify({ 
+            message: currentQuestion,
+            session_id: sessionId,
+            user_id: userId
+          }),
         });
 
         const data = await response.json();
+        
+        // Save session_id from response
+        if (data.session_id) {
+          setSessionId(data.session_id);
+          localStorage.setItem("lastSessionId", data.session_id);
+        }
+        
         setMessages((prev) => [...prev, { text: data.reply, sender: "ai" }]);
       } catch (error) {
         console.error("Error communicating with backend:", error);
@@ -81,6 +141,9 @@ function Home() {
   const handleNewChat = () => {
     setMessages([{ text: "New Chat Started! How can I help?", sender: "ai" }]);
     setQuestion("");
+    setSessionId(null);
+    localStorage.removeItem("lastSessionId");
+    loadSessions();
   };
 
   const toggleTheme = () => {
@@ -114,8 +177,21 @@ function Home() {
 
       {showHistory && (
         <div className="history-panel">
-          <h3>Chat History</h3>
-          <p>No previous chats</p>
+          <h3>Chat Sessions</h3>
+          {sessions.length > 0 ? (
+            <div className="session-list">
+              {sessions.map((session, index) => (
+                <div key={index} className="session-item">
+                  <div className="session-preview">{session.preview}</div>
+                  <div className="session-meta">
+                    {session.message_count} messages
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>No previous chats</p>
+          )}
         </div>
       )}
 

@@ -101,32 +101,31 @@ def upsert_chunks(
     logger.info(f"✅ Stored {len(ids)} chunks in Chroma")
 
 
-def search_chunks(
+def search_chunks_mmr(
     query: str,
-    top_k: int = 5,
-    collection_name: str = DEFAULT_COLLECTION_NAME,
+    k: int = 4,
+    fetch_k: int = 10,
+    similarity_threshold: float = 0.35
 ) -> List[Dict[str, Any]]:
     """
-    Semantic search over chunks stored in Chroma.
-    Returns top_k most similar chunks.
+    MMR-based semantic search for diverse and relevant results.
     """
     if not query:
-        logger.warning("⚠️ Empty query passed to search_chunks")
+        logger.warning("⚠️ Empty query")
         return []
 
-    # 1) embed query using same model
     q_emb = generate_embedding(query)
     if q_emb is None:
         logger.error("❌ Failed to generate query embedding")
         return []
 
-    # 2) query Chroma
-    collection = get_collection(collection_name)
+    collection = get_collection()
 
+    # Fetch more candidates for MMR
     res = collection.query(
         query_embeddings=[q_emb],
-        n_results=top_k,
-        include=["documents", "metadatas",  "distances"],
+        n_results=fetch_k,
+        include=["documents", "metadatas", "distances"],
     )
 
     ids = res.get("ids")[0]
@@ -134,23 +133,60 @@ def search_chunks(
     metas = res.get("metadatas", [[]])[0]
     dists = res.get("distances", [[]])[0]
 
-    # Convert distances to similarity (optional)
-    out = []
+    # Filter and score
+    candidates = []
     for cid, doc, meta, dist in zip(ids, docs, metas, dists):
+        if not doc or len(doc.strip()) < 20:
+            continue
+            
         distance = float(dist)
         similarity = 1.0 / (1.0 + distance)
-        out.append(
-            {
-                "chunk_id": cid,
-                "content": doc,
-                "metadata": meta,
-                "distance": distance,
-                "similarity_score": similarity,
-            }
-        )
+        
+        if similarity < similarity_threshold:
+            continue
+        
+        candidates.append({
+            "chunk_id": cid,
+            "content": doc,
+            "metadata": meta,
+            "distance": distance,
+            "similarity_score": similarity,
+        })
 
-    logger.info(f"✅ Found {len(out)} results for query: {query!r}")
-    return out
+    # Apply MMR: maximize relevance and diversity
+    if len(candidates) <= k:
+        return candidates
+    
+    selected = [candidates[0]]  # Start with most relevant
+    candidates = candidates[1:]
+    
+    while len(selected) < k and candidates:
+        best_score = -1
+        best_idx = 0
+        
+        for idx, candidate in enumerate(candidates):
+            # Relevance score
+            relevance = candidate["similarity_score"]
+            
+            # Diversity: penalize similarity to already selected
+            max_similarity_to_selected = 0
+            for sel in selected:
+                # Simple diversity: check content overlap
+                overlap = len(set(candidate["content"].split()) & set(sel["content"].split()))
+                diversity_penalty = overlap / max(len(candidate["content"].split()), 1)
+                max_similarity_to_selected = max(max_similarity_to_selected, diversity_penalty)
+            
+            # MMR score: balance relevance and diversity
+            mmr_score = 0.7 * relevance - 0.3 * max_similarity_to_selected
+            
+            if mmr_score > best_score:
+                best_score = mmr_score
+                best_idx = idx
+        
+        selected.append(candidates.pop(best_idx))
+    
+    logger.info(f"✅ MMR selected {len(selected)} diverse results")
+    return selected
 
 
 # ------------------ 🔍 SELF-TEST BLOCK ------------------ #

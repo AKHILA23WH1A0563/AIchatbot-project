@@ -2,7 +2,8 @@ import os
 import uuid
 from datetime import datetime
 from dotenv import load_dotenv
-from app.services.vector_store import search_chunks
+from app.services.vector_store import search_chunks_mmr
+from app.services.query_rewriter import rewrite_query_with_history, filter_relevant_chunks
 
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -31,9 +32,12 @@ def initialize_llm():
         raise Exception("No LLM available. Check API keys.")
 
 
-def get_ai_response(query: str, top_k: int = 3):
+def get_ai_response(query: str, chat_history: list = None):
     try:
         llm = initialize_llm()
+        
+        if chat_history is None:
+            chat_history = []
 
         greetings = ['hi', 'hello', 'hey', 'hii', 'hiii', 'greetings']
         thanks = ['thank you', 'thanks', 'thank u', 'thankyou', 'thx', 'ty']
@@ -63,18 +67,28 @@ def get_ai_response(query: str, top_k: int = 3):
                     "thanks": True
                 }
             }
-
-        retrieved_chunks = search_chunks(query, top_k=top_k)
+        
+        # Rewrite query using chat history
+        rewritten_query = rewrite_query_with_history(query, chat_history)
+        print(f"\n--- QUERY REWRITING ---")
+        print(f"Original: {query}")
+        print(f"Rewritten: {rewritten_query}")
+        
+        # Use MMR retrieval
+        retrieved_chunks = search_chunks_mmr(rewritten_query, k=4, fetch_k=10)
+        
+        # Filter for relevance
+        filtered_chunks = filter_relevant_chunks(retrieved_chunks, rewritten_query)
 
         print("\n--- RETRIEVED CHUNKS ---")
-        for i, chunk in enumerate(retrieved_chunks, 1):
+        for i, chunk in enumerate(filtered_chunks, 1):
             print(f"Chunk {i}: {chunk.get('metadata', {}).get('source', 'unknown')}")
             print(chunk.get("content", "")[:300])
             print("-" * 40)
 
-        if not retrieved_chunks:
+        if not filtered_chunks:
             return {
-                "reply": "I don't have enough information in the provided documents.",
+                "reply": "Information not found in documents.",
                 "metadata": {
                     "interaction_uuid": str(uuid.uuid4()),
                     "timestamp": datetime.now().isoformat(),
@@ -87,7 +101,7 @@ def get_ai_response(query: str, top_k: int = 3):
         context_parts = []
         sources = set()
 
-        for chunk in retrieved_chunks:
+        for chunk in filtered_chunks:
             content = chunk.get("content", "")
             metadata = chunk.get("metadata", {})
             source = metadata.get("source", "unknown")
@@ -98,25 +112,29 @@ def get_ai_response(query: str, top_k: int = 3):
             context_parts.append(f"[Source: {source}]\n{truncated_content}")
 
         combined_context = "\n\n".join(context_parts)
+        
+        # Build conversation history context
+        history_context = ""
+        if chat_history:
+            history_context = "\n\nPREVIOUS CONVERSATION:\n"
+            for msg in chat_history[-3:]:
+                history_context += f"User: {msg.get('query', '')}\nAssistant: {msg.get('response', '')}\n"
 
-        rag_prompt = f"""You are a helpful travel assistant.
+        rag_prompt = f"""You are a helpful travel assistant. Answer using the context and conversation history.
 
-STRICT RULES:
-- Answer ONLY from the provided context.
-- Do NOT use outside knowledge.
-- If the answer is not present in the context, say exactly:
-"I don't have enough information in the provided documents."
-- Keep the answer short, clear, and direct.
-- Use numbered points only when needed.
+IMPORTANT RULES:
+1. Use information from CONTEXT below
+2. Consider PREVIOUS CONVERSATION to understand follow-up questions
+3. If answer is NOT in context, say: "Information not found in documents."
+4. Be concise and direct
+5. Use bullet points for lists
 
-Context:
-{combined_context}
+CONTEXT:
+{combined_context}{history_context}
 
-Question:
-{query}
+CURRENT QUESTION: {query}
 
-Answer:
-"""
+ANSWER:"""
 
         response = llm.invoke(rag_prompt)
 
@@ -125,7 +143,8 @@ Answer:
         print(f"\n--- RAG METADATA LOG ---")
         print(f"ID: {interaction_id}")
         print(f"Query: {query}")
-        print(f"Chunks Retrieved: {len(retrieved_chunks)}")
+        print(f"Rewritten: {rewritten_query}")
+        print(f"Chunks Retrieved: {len(filtered_chunks)}")
         print(f"Sources: {list(sources)}")
         print(f"------------------------\n")
 
@@ -135,8 +154,8 @@ Answer:
                 "interaction_uuid": interaction_id,
                 "timestamp": datetime.now().isoformat(),
                 "sources_consulted": list(sources),
-                "chunks_retrieved": len(retrieved_chunks),
-                "similarity_scores": [c.get("similarity_score") for c in retrieved_chunks],
+                "chunks_retrieved": len(filtered_chunks),
+                "similarity_scores": [c.get("similarity_score") for c in filtered_chunks],
                 "out_of_scope": False
             }
         }

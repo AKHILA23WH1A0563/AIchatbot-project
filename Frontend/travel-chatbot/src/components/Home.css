@@ -112,19 +112,54 @@
   border: 1px solid #333;
   border-radius: 12px;
   padding: 20px;
-  min-width: 250px;
+  min-width: 300px;
+  max-width: 400px;
+  max-height: 500px;
+  overflow-y: auto;
   z-index: 100;
   box-shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
 
 .history-panel h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 15px 0;
   font-size: 16px;
 }
 
 .history-panel p {
   color: #888;
   font-size: 14px;
+}
+
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.session-item {
+  background: #252525;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.session-item:hover {
+  background: #333;
+}
+
+.session-preview {
+  font-size: 14px;
+  color: #fff;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-meta {
+  font-size: 12px;
+  color: #888;
 }
 
 /* --- CHAT AREA LOGIC --- */

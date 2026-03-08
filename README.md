@@ -1,8 +1,5 @@
-Here is the updated, complete `README.md` file. I have integrated your 10th and 11th user stories (Persistence and Contextual Memory) into the existing structure, updated the "Features Implemented" section, and refined the "RAG Pipeline Details" to reflect the new updates.
-
 ---
-
-# AI Travel Chatbot with RAG (Complete Implementation)
+# AI Travel Chatbot with RAG 
 
 ## Project Overview
 
