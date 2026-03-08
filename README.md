@@ -1,4 +1,3 @@
----
 # AI Travel Chatbot with RAG 
 
 ## Project Overview
