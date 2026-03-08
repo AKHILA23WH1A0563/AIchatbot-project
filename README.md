@@ -1,13 +1,20 @@
+Here is the updated, complete `README.md` file. I have integrated your 10th and 11th user stories (Persistence and Contextual Memory) into the existing structure, updated the "Features Implemented" section, and refined the "RAG Pipeline Details" to reflect the new updates.
+
+---
+
 # AI Travel Chatbot with RAG (Complete Implementation)
 
 ## Project Overview
 
 A full-stack AI Travel Chatbot with complete RAG (Retrieval-Augmented Generation) implementation. The system uses semantic search with ChromaDB, vector embeddings, and LLM integration to provide accurate travel information from PDF documents.
 
+**Latest Updates:** The system now supports **Contextual Memory** (remembering follow-up questions) and **Full Message Persistence** using MongoDB.
+
 **Tech Stack:**
-- **Backend**: FastAPI, MongoDB, ChromaDB, LangChain, Groq LLM
-- **Frontend**: React, JavaScript, CSS
-- **AI/ML**: Sentence Transformers, Semantic Search, RAG Pipeline
+
+* **Backend**: FastAPI, MongoDB, ChromaDB, LangChain, Groq LLM
+* **Frontend**: React, JavaScript, CSS
+* **AI/ML**: Sentence Transformers, Semantic Search, RAG Pipeline, Contextual Query Rewriting
 
 ---
 
@@ -17,28 +24,27 @@ A full-stack AI Travel Chatbot with complete RAG (Retrieval-Augmented Generation
 AIchatbot-project-feature-full-project/
 │
 ├── Backend/
-│   ├── app/
-│   │   ├── api/v1/
-│   │   │   ├── routes/          # API endpoints (auth, chat, chatbot, RAG)
-│   │   │   └── router.py        # Main router
-│   │   ├── core/                # Configuration
-│   │   ├── db/                  # Database models and connection
-│   │   ├── services/            # RAG services (AI, embeddings, vector store)
-│   │   ├── utils/               # PDF/URL extractors, text cleaners
-│   │   └── main.py              # FastAPI application
-│   ├── data_source/             # PDF documents for knowledge base
-│   ├── chroma_db/               # Vector database storage
-│   ├── requirements.txt
-│   ├── .env
-│   └── run_server.py
+│   ├── app/
+│   │   ├── api/v1/
+│   │   │   ├── routes/          # API (auth, chat, history, RAG)
+│   │   │   └── router.py        # Main router
+│   │   ├── core/                # Configuration & Security
+│   │   ├── db/                  # MongoDB models (User, ChatHistory)
+│   │   ├── services/            # RAG, Memory & Query Rewriting
+│   │   ├── utils/               # PDF extractors, Text cleaners
+│   │   └── main.py              # FastAPI application
+│   ├── data_source/             # PDF knowledge base
+│   ├── chroma_db/               # Vector database storage
+│   ├── requirements.txt
+│   └── .env
 │
 └── Frontend/
-    └── travel-chatbot/
-        ├── src/
-        │   ├── components/      # React components (Home, Login, Register)
-        │   └── assets/          # Images
-        ├── package.json
-        └── package-lock.json
+    └── travel-chatbot/
+        ├── src/
+        │   ├── components/      # React components (Chat, History, Auth)
+        │   └── assets/          # UI Assets
+        └── package.json
+
 ```
 
 ---
@@ -46,221 +52,102 @@ AIchatbot-project-feature-full-project/
 ## Features Implemented
 
 ### ✅ Complete RAG Pipeline
-1. **Knowledge Ingestion**: PDF and URL content extraction
-2. **Text Cleaning**: Removes noise, normalizes formatting
-3. **Content Chunking**: Smart chunking with overlap and metadata
-4. **Vector Embeddings**: Sentence Transformers (all-MiniLM-L6-v2)
-5. **Vector Storage**: ChromaDB with semantic search
-6. **Context Injection**: Retrieves relevant chunks for LLM
-7. **LLM Generation**: Groq (llama-3.1-8b-instant) for responses
 
-### ✅ Authentication System
-- User registration and login
-- JWT token-based authentication
-- MongoDB user storage
+1. **Knowledge Ingestion**: PDF and URL content extraction.
+2. **Text Cleaning**: Removes noise, normalizes formatting.
+3. **Content Chunking**: Smart chunking with overlap and metadata.
+4. **Vector Embeddings**: Sentence Transformers (all-MiniLM-L6-v2).
+5. **Vector Storage**: ChromaDB with semantic search.
+6. **Context Injection**: Retrieves relevant chunks for LLM.
+7. **LLM Generation**: Groq (llama-3.1-8b-instant) for responses.
 
-### ✅ Chat Interface
-- Real-time chat with AI assistant
-- Message formatting (lists, bold text, line breaks)
-- Theme toggle (dark/light mode)
-- Chat history panel
-- Auto-scroll and full history access
+### ✅ Chat Message Persistence (User Story #10)
 
-### ✅ Smart Response Handling
-- Greeting detection
-- Thank you responses
-- Out-of-scope query handling
-- Focused, relevant answers
+* **Automatic Saving**: Conversations are saved automatically to the `chat_history` collection in MongoDB.
+* **Data Integrity**: Stores `user_id`, `session_id`, `query`, `response` (with sources), and `timestamp`.
+* **Reference Tracking**: Users can refer back to previous answers and their specific document sources anytime.
 
----
+### ✅ Contextual Conversation Memory (User Story #11)
 
-## Installation & Setup
+* **Follow-up Support**: Chatbot remembers previous questions in the current session.
+* **Window Buffer**: Retrieves the last 5–10 messages to maintain short-term context.
+* **Query Rewriting**: Applies AI-driven query rewriting before semantic search to ensure follow-up questions (e.g., "What about Air India?") find the right data.
+* **Token Control**: Maintains limit control to ensure fast inference.
 
-### Prerequisites
-- Python 3.8+
-- Node.js 14+
-- MongoDB running on localhost:27017
+### ✅ Authentication & Interface
 
-### Backend Setup
-
-```bash
-cd Backend
-
-# Create virtual environment
-python -m venv .venv
-.venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment variables
-# Edit .env file with your GROQ_API_KEY and MONGO_URI
-
-# Ingest documents into vector database
-python -m app.services.ingestion_engine
-
-# Start server
-python run_server.py
-```
-
-Server runs at: `http://localhost:8000`
-
-### Frontend Setup
-
-```bash
-cd Frontend/travel-chatbot
-
-# Install dependencies
-npm install
-
-# Start development server
-npm start
-```
-
-Application opens at: `http://localhost:3000`
+* **Auth**: User registration/login with JWT token-based authentication.
+* **UI**: Real-time chat, dark/light mode toggle, and auto-scrolling history.
 
 ---
 
 ## API Endpoints
 
-### Authentication (No prefix)
-- `POST /auth/register` - User registration
-- `POST /auth/login` - User login
+### Authentication
 
-### Chat (No prefix)
-- `POST /chat` - Send message to AI (no auth required)
+* `POST /auth/register` - User registration
+* `POST /auth/login` - User login
 
-### RAG Testing (Prefix: /api/v1)
-- `GET /api/v1/rag/health` - Check RAG system status
-- `POST /api/v1/rag/test` - Test RAG with custom query
+### Chat & History
 
-### Chatbot (Prefix: /api/v1, Auth required)
-- `POST /api/v1/chatbot/message` - Send message in conversation
+* `POST /api/v1/chatbot/message` - Send message (Handles Memory + RAG + Saving)
+* `GET /api/v1/chatbot/history/{user_id}` - Retrieve user's saved conversations
+
+### RAG Testing
+
+* `POST /api/v1/rag/test` - Test RAG with custom query (No history)
 
 ---
 
 ## RAG Pipeline Details
 
-### 1. Document Ingestion
-- Extracts text from PDFs in `data_source/` folder
-- Preserves metadata (source, file type, ingestion date)
+### 1. Document Ingestion & Chunking
 
-### 2. Text Cleaning
-- Removes extra whitespace and special characters
-- Normalizes unicode and line endings
-- Filters page numbers and noise
+* Extracts text from PDFs and creates 500-character chunks with 100-character overlap to preserve context across splits.
 
-### 3. Content Chunking
-- Chunk size: 500 characters
-- Overlap: 100 characters
-- Unique chunk IDs (UUID)
-- Metadata: source, file_type, chunk_number, timestamp
+### 2. Semantic Retrieval
 
-### 4. Vector Embeddings
-- Model: `all-MiniLM-L6-v2` (384 dimensions)
-- Batch processing for efficiency
-- Embedding failure logging
+* Top-K relevant chunks (default: 3) retrieved via Cosine Similarity.
 
-### 5. Vector Storage (ChromaDB)
-- Persistent storage in `chroma_db/`
-- Cosine similarity search
-- Stores: embeddings + metadata + text
+### 3. Contextual Query Rewriter (New)
 
-### 6. Semantic Retrieval
-- Top-K relevant chunks (default: 3)
-- Similarity scoring
-- Source attribution
+* If a conversation is ongoing, the LLM reformulates the user's input into a "standalone question" based on chat history before searching ChromaDB.
 
-### 7. LLM Generation
-- Model: Groq `llama-3.1-8b-instant`
-- Temperature: 0.5
-- Max tokens: 350
-- Structured RAG prompts
+### 4. Persistence Logic (New)
 
----
-
-## Configuration
-
-### Environment Variables (.env)
-```
-MONGO_URI=mongodb://localhost:27017/chat_db
-GROQ_API_KEY=your_groq_api_key_here
-```
-
-### LLM Settings (ai_services.py)
-- Model: `llama-3.1-8b-instant`
-- Temperature: 0.5 (balanced)
-- Max tokens: 350
-- Top-K chunks: 3
-
----
-
-## Usage Examples
-
-### Simple Chat
-```bash
-POST http://localhost:8000/chat
-{
-  "message": "What are the baggage rules for Air India?"
-}
-```
-
-### RAG Test
-```bash
-POST http://localhost:8000/api/v1/rag/test
-{
-  "question": "Tell me about flight delays",
-  "top_k": 3
-}
-```
+* Every interaction triggers a background save to MongoDB, ensuring no data loss even if the browser is refreshed.
 
 ---
 
 ## Project Status
 
 | Feature | Status |
-|---------|--------|
+| --- | --- |
 | Knowledge Ingestion | ✅ Complete |
-| Text Extraction & Cleaning | ✅ Complete |
-| Content Chunking | ✅ Complete |
-| Metadata Management | ✅ Complete |
-| Vector Embeddings | ✅ Complete |
 | Vector Database | ✅ Complete |
-| Semantic Search | ✅ Complete |
-| Context Injection | ✅ Complete |
 | LLM Integration | ✅ Complete |
 | Authentication | ✅ Complete |
-| Chat UI | ✅ Complete |
-| Theme Toggle | ✅ Complete |
-| Message Formatting | ✅ Complete |
+| **Chat Message Persistence** | ✅ **Implemented** |
+| **Contextual Short-term Memory** | ✅ **Implemented** |
+| Theme Toggle & Formatting | ✅ Complete |
 
 ---
 
 ## Technologies Used
 
-### Backend
-- **FastAPI**: Modern web framework
-- **MongoDB**: User and conversation storage
-- **ChromaDB**: Vector database
-- **LangChain**: LLM integration
-- **Groq**: Fast LLM inference
-- **Sentence Transformers**: Embeddings
-- **PyPDF**: PDF text extraction
-
-### Frontend
-- **React**: UI framework
-- **CSS3**: Styling with themes
-- **Fetch API**: HTTP requests
+* **Backend**: FastAPI, MongoDB, ChromaDB, LangChain, Groq
+* **AI**: Sentence Transformers, Llama 3.1
+* **Frontend**: React, CSS3
 
 ---
-
 
 ## Future Enhancements
 
-- [ ] Conversation history persistence
-- [ ] Multi-language support
-- [ ] Voice input/output
-- [ ] Advanced filtering options
-- [ ] Analytics dashboard
+* [ ] Multi-language support
+* [ ] Voice input/output
+* [ ] Advanced filtering options
+* [ ] Analytics dashboard
 
 ---
+
+Would you like me to provide the **Python code for the Query Rewriter** or the **MongoDB Schema** used for the persistence logic?

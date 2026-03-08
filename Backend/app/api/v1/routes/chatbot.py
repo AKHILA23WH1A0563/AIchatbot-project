@@ -4,13 +4,15 @@ from bson import ObjectId
 from datetime import datetime
 from app.db.database import get_db
 from app.api.deps import get_current_user
-from app.services.ai_services import get_ai_response
+from app.services.chat_service import handle_chat
 
 router = APIRouter()
+
 
 class ChatbotMessageRequest(BaseModel):
     conversationId: str
     text: str
+
 
 @router.post("/message")
 async def chatbot_message(
@@ -38,17 +40,25 @@ async def chatbot_message(
         "created_at": datetime.utcnow()
     })
 
-    # RAG-based AI response with semantic search
-    ai_result = get_ai_response(payload.text)
-    bot_reply = ai_result.get("reply", "Sorry, I couldn't process your request.")
-    metadata = ai_result.get("metadata", {})
+    # US-11: contextual memory + query rewriting + retrieval + response
+    ai_result = await handle_chat(
+        user_id=current_user["email"],
+        session_id=payload.conversationId,
+        query=payload.text
+    )
+
+    bot_reply = ai_result.get("response", "Sorry, I couldn't process your request.")
+    sources = ai_result.get("sources", [])
 
     # Save bot reply with metadata
     await db.messages.insert_one({
         "conversationId": conv_oid,
         "sender": "bot",
         "text": bot_reply,
-        "metadata": metadata,
+        "metadata": {
+            "sources": sources,
+            "rewritten_query": ai_result.get("rewritten_query")
+        },
         "created_at": datetime.utcnow()
     })
 
@@ -56,5 +66,8 @@ async def chatbot_message(
         "conversationId": payload.conversationId,
         "sender": "bot",
         "reply": bot_reply,
-        "metadata": metadata
+        "metadata": {
+            "sources": sources,
+            "rewritten_query": ai_result.get("rewritten_query")
+        }
     }
