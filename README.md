@@ -28,7 +28,7 @@ AIchatbot-project-feature-full-project/
 │   │   ├── db/                  # MongoDB models (User, ChatHistory)
 │   │   ├── services/            # RAG, Memory & Query Rewriting
 │   │   ├── utils/               # PDF extractors, Text cleaners
-│   │   └── main.py              # FastAPI application
+│   │   └──               # FastAPI application
 │   ├── data_source/             # PDF knowledge base
 │   ├── chroma_db/               # Vector database storage
 │   ├── requirements.txt
