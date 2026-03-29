@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import "./Register.css";
-import { Link, useNavigate } from "react-router-dom"; // Added useNavigate for redirection
+import { Link, useNavigate } from "react-router-dom";
+
+// Centralized API URL for your EC2 Backend
+const BASE_URL = "http://13.205.31.186:8000";
 
 function Register() {
   const [fullName, setFullName] = useState("");
@@ -11,7 +14,7 @@ function Register() {
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
   
-  const navigate = useNavigate(); // Hook to change pages after success
+  const navigate = useNavigate();
 
   const handleRegister = async () => {
     setMessage("");
@@ -34,10 +37,10 @@ function Register() {
       return;
     }
 
-    // 2. Integration Logic (Connecting to Python Backend)
+    // 2. Integration Logic (Connecting to EC2 Backend)
     try {
-      // Cleaned to use the standard /auth/register route from your current backend
-      const response = await fetch('http://127.0.0.1:8000/auth/register', {
+      // UPDATED: Pointing to EC2 Public IP
+      const response = await fetch(`${BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,17 +67,15 @@ function Register() {
         setPassword("");
         setConfirmPassword("");
 
-        // Move to login page after 2 seconds
         setTimeout(() => {
           navigate("/login");
         }, 2000);
       } else {
-        // Show the error message from the Python Backend
         setMessage(data.detail || "Registration failed");
       }
     } catch (error) {
       console.error("Connection Error:", error);
-      setMessage("Backend server not reached. Check if Python is running on port 8000.");
+      setMessage("Backend server not reached. Check if EC2 is running and Port 8000 is open.");
     }
   };
 

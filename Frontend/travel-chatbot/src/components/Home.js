@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import "./Home.css";
 import DeleteModal from "./DeleteModal";
 
+// Centralized API URL for your EC2 Backend
+const BASE_URL = "http://13.205.31.186:8000";
+
 function Home() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([
@@ -36,7 +39,8 @@ function Home() {
     if (!lastSessionId) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/chat/history/${lastSessionId}`);
+      // UPDATED: Pointing to EC2 Public IP
+      const response = await fetch(`${BASE_URL}/chat/history/${lastSessionId}`);
       const data = await response.json();
 
       if (data.messages && data.messages.length > 0) {
@@ -57,7 +61,8 @@ function Home() {
 
   const loadSessions = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/chat/sessions/${userId}`);
+      // UPDATED: Pointing to EC2 Public IP
+      const response = await fetch(`${BASE_URL}/chat/sessions/${userId}`);
       const data = await response.json();
       setSessions(data.sessions || []);
     } catch (error) {
@@ -67,7 +72,8 @@ function Home() {
 
   const loadSessionHistory = async (session_id) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/chat/history/${session_id}`);
+      // UPDATED: Pointing to EC2 Public IP
+      const response = await fetch(`${BASE_URL}/chat/history/${session_id}`);
       const data = await response.json();
 
       if (data.messages && data.messages.length > 0) {
@@ -98,8 +104,9 @@ function Home() {
     try {
       const token = localStorage.getItem("token");
 
+      // UPDATED: Pointing to EC2 Public IP via /api/v1 prefix
       const response = await fetch(
-        `http://127.0.0.1:8000/api/v1/sessions/sessions/${sessionToDelete}`,
+        `${BASE_URL}/api/v1/sessions/sessions/${sessionToDelete}`,
         {
           method: "DELETE",
           headers: {
@@ -139,46 +146,25 @@ function Home() {
 
   const formatMessage = (text) => {
     if (!text) return "";
-
     const lines = text.split("\n");
-
     return lines.map((line, index) => {
       const processedLine = line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
       if (/^\d+\.\s/.test(line)) {
         return (
-          <div
-            key={index}
-            className="list-item numbered"
-            dangerouslySetInnerHTML={{ __html: processedLine }}
-          />
+          <div key={index} className="list-item numbered" dangerouslySetInnerHTML={{ __html: processedLine }} />
         );
       } else if (/^[-•*+]\s/.test(line)) {
         return (
-          <div
-            key={index}
-            className="list-item bullet"
-            dangerouslySetInnerHTML={{ __html: processedLine }}
-          />
+          <div key={index} className="list-item bullet" dangerouslySetInnerHTML={{ __html: processedLine }} />
         );
-      } else if (
-        /^\*\*.*\*\*:?$/.test(line) ||
-        (line === line.toUpperCase() && line.length > 3 && line.length < 50)
-      ) {
+      } else if (/^\*\*.*\*\*:?$/.test(line) || (line === line.toUpperCase() && line.length > 3 && line.length < 50)) {
         return (
-          <div
-            key={index}
-            className="message-heading"
-            dangerouslySetInnerHTML={{ __html: processedLine }}
-          />
+          <div key={index} className="message-heading" dangerouslySetInnerHTML={{ __html: processedLine }} />
         );
       } else if (line.trim()) {
         return (
-          <div
-            key={index}
-            className="message-line"
-            dangerouslySetInnerHTML={{ __html: processedLine }}
-          />
+          <div key={index} className="message-line" dangerouslySetInnerHTML={{ __html: processedLine }} />
         );
       } else {
         return <div key={index} className="message-spacer"></div>;
@@ -196,7 +182,8 @@ function Home() {
     setQuestion("");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/chat", {
+      // UPDATED: Pointing to EC2 Public IP
+      const response = await fetch(`${BASE_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -219,7 +206,7 @@ function Home() {
       console.error(error);
       setMessages((prev) => [
         ...prev,
-        { text: "Error connecting to server.", sender: "ai" }
+        { text: "Error connecting to server. Ensure EC2 Port 8000 is open.", sender: "ai" }
       ]);
     }
   };
@@ -245,14 +232,8 @@ function Home() {
   return (
     <div className={`home-page ${isDarkTheme ? "dark-theme" : "light-theme"}`}>
       <div className="sidebar">
-        <button className="menu-btn" onClick={handleNewChat}>
-          + New Chat
-        </button>
-
-        <button className="menu-btn" onClick={toggleHistory}>
-          🕒 Chat History
-        </button>
-
+        <button className="menu-btn" onClick={handleNewChat}>+ New Chat</button>
+        <button className="menu-btn" onClick={toggleHistory}>🕒 Chat History</button>
         <button className="menu-btn" onClick={toggleTheme}>
           {isDarkTheme ? "☀️ Light Theme" : "🌙 Dark Theme"}
         </button>
@@ -260,41 +241,22 @@ function Home() {
         {showHistory && (
           <div className="history-panel">
             <h3>Chat Sessions</h3>
-
             {sessions.length > 0 ? (
               <div className="session-list">
                 {sessions.map((session, index) => (
                   <div key={index} className="session-item">
-                    <div
-                      className="session-preview"
-                      onClick={() => loadSessionHistory(session.session_id)}
-                      style={{ cursor: "pointer" }}
-                    >
+                    <div className="session-preview" onClick={() => loadSessionHistory(session.session_id)} style={{ cursor: "pointer" }}>
                       {session.preview}
                     </div>
-
-                    <div className="session-meta">
-                      {session.message_count} messages
-                    </div>
-
-                    <button
-                      className="delete-btn"
-                      onClick={() => deleteSession(session.session_id)}
-                    >
-                      Delete
-                    </button>
+                    <div className="session-meta">{session.message_count} messages</div>
+                    <button className="delete-btn" onClick={() => deleteSession(session.session_id)}>Delete</button>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p>No previous chats</p>
-            )}
+            ) : (<p>No previous chats</p>)}
           </div>
         )}
-
-        <button className="menu-btn signout-btn" onClick={handleSignOut}>
-          Sign Out
-        </button>
+        <button className="menu-btn signout-btn" onClick={handleSignOut}>Sign Out</button>
       </div>
 
       <div className="main-content">
@@ -307,10 +269,7 @@ function Home() {
           ) : (
             <div className="chat-window" ref={chatWindowRef}>
               {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`message-bubble ${msg.sender}-bubble`}
-                >
+                <div key={index} className={`message-bubble ${msg.sender}-bubble`}>
                   {msg.sender === "ai" ? formatMessage(msg.text) : msg.text}
                 </div>
               ))}
@@ -327,21 +286,13 @@ function Home() {
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
             />
-
-            <button className="send-icon-btn" onClick={handleSend}>
-              ➤
-            </button>
+            <button className="send-icon-btn" onClick={handleSend}>➤</button>
           </div>
         </div>
-
         <div className="sparkle">✦</div>
       </div>
 
-      <DeleteModal
-        isOpen={showDeleteModal}
-        onClose={cancelDelete}
-        onConfirm={confirmDelete}
-      />
+      <DeleteModal isOpen={showDeleteModal} onClose={cancelDelete} onConfirm={confirmDelete} />
     </div>
   );
 }
