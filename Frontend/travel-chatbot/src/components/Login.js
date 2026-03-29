@@ -1,85 +1,96 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Login.css";
 import { Link, useNavigate } from "react-router-dom";
+import { loadGoogleScript, initGoogleButton, isGoogleEnabled } from "./googleAuth";
 
-// Centralized API URL - using your EC2 Elastic IP
-const BASE_URL = "http://13.205.31.186:8000";
+const BASE_URL = process.env.REACT_APP_BASE_URL || "http://localhost:8000";
 
 function Login() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isGoogleEnabled()) return;
+    loadGoogleScript(() => initGoogleButton("google-signin-btn", handleGoogleResponse));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleGoogleResponse = async (response) => {
+    setGoogleLoading(true);
+    setMessage("");
+    try {
+      const res = await fetch(`${BASE_URL}/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        saveAndRedirect(data);
+      } else {
+        setMessage(data.detail || "Google sign-in failed. Please try again.");
+      }
+    } catch {
+      setMessage("Unable to connect to the server. Please check your internet connection.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const saveAndRedirect = (data) => {
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem("userName", data.user.fullName);
+    localStorage.setItem("userId", data.user.id || data.user.email);
+    setMessage("Login successful! Redirecting...");
+    setSuccess(true);
+    setTimeout(() => navigate("/home"), 1000);
+  };
 
   const handleLogin = async () => {
     setMessage("");
     setSuccess(false);
 
     if (!identifier || !password) {
-      setMessage("All fields are required");
+      setMessage("Please enter your email/mobile and password.");
       return;
     }
 
     const isEmail = identifier.includes("@");
     const isMobile = /^\d+$/.test(identifier);
 
-    /* ---------- VALIDATION ---------- */
     if (isEmail) {
-      if (!/^[a-zA-Z]/.test(identifier)) {
-        setMessage("Email must start with alphabets");
-        return;
-      }
-      const emailRegex = /^[a-zA-Z][a-zA-Z0-9._]*@gmail\.com$/;
-      if (!emailRegex.test(identifier)) {
-        setMessage("Enter email in valid format (example: abc@gmail.com)");
+      if (!/^[a-zA-Z][a-zA-Z0-9._]*@gmail\.com$/.test(identifier)) {
+        setMessage("Enter a valid Gmail address (e.g. abc@gmail.com).");
         return;
       }
     } else if (isMobile) {
       if (identifier.length !== 10) {
-        setMessage("Mobile number must contain exactly 10 digits");
+        setMessage("Mobile number must be exactly 10 digits.");
         return;
       }
     } else {
-      setMessage("Enter a valid Email or Mobile Number");
+      setMessage("Enter a valid email address or 10-digit mobile number.");
       return;
     }
 
-    /* ---------- BACKEND LOGIN ---------- */
     try {
-      // UPDATED: Now points to your EC2 instead of localhost
       const response = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          identifier: identifier,
-          password: password
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, password }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        setMessage("Login successful! Redirecting...");
-        setSuccess(true);
-
-        /* ---------- SAVE USER DATA ---------- */
-        localStorage.setItem("userName", data.user.fullName);
-        localStorage.setItem("token", data.access_token);
-
-        /* ---------- REDIRECT ---------- */
-        setTimeout(() => {
-          navigate("/home");
-        }, 1000);
+        saveAndRedirect(data);
       } else {
-        setMessage(data.detail || "Login failed. Check your credentials.");
+        setMessage(data.detail || "Login failed. Please check your credentials.");
       }
-    } catch (error) {
-      console.error("Login Error:", error);
-      setMessage("Cannot reach the server. Ensure EC2 is running and Port 8000 is open.");
+    } catch {
+      setMessage("Unable to reach the server. Please try again later.");
     }
   };
 
@@ -108,15 +119,22 @@ function Login() {
           />
           <button onClick={handleLogin}>Login</button>
           <div className="forgot-password">Forgot Password?</div>
+
+          {isGoogleEnabled() && (
+            <>
+              <div className="divider">— or —</div>
+              {googleLoading
+                ? <p style={{ textAlign: "center", color: "#666" }}>Signing in with Google...</p>
+                : <div id="google-signin-btn"></div>
+              }
+            </>
+          )}
+
           <p className="register-text">
-            Don’t have an account?{" "}
+            Don't have an account?{" "}
             <Link to="/register" className="register-link">Register</Link>
           </p>
-          {message && (
-            <p className={success ? "success-msg" : "error-msg"}>
-              {message}
-            </p>
-          )}
+          {message && <p className={success ? "success-msg" : "error-msg"}>{message}</p>}
         </div>
       </div>
     </div>
