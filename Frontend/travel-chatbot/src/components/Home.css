@@ -163,12 +163,12 @@
 
 .chat-window {
   width: 90%;
-  max-width: 700px;
+  max-width: 720px;
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 10px;
+  gap: 12px;
+  padding: 16px 10px;
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
@@ -191,12 +191,13 @@
   background: #555;
 }
 
+/* Message bubbles */
 .message-bubble {
-  padding: 12px 18px;
-  border-radius: 20px;
-  max-width: 80%;
+  padding: 14px 20px;
+  border-radius: 18px;
+  max-width: 82%;
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.75;
   word-wrap: break-word;
   animation: fadeIn 0.3s ease;
   white-space: pre-wrap;
@@ -212,33 +213,39 @@
 
 .ai-bubble {
   align-self: flex-start;
-  background-color: #1a1a1a;
-  color: #efefef;
-  border: 1px solid #333;
+  background-color: #161616;
+  color: #e8e8e8;
+  border: 1px solid #2e2e2e;
+  border-left: 3px solid #0066ff;
   border-bottom-left-radius: 4px;
   text-align: left;
+  padding: 16px 20px;
 }
 
 .home-page.light-theme .ai-bubble {
-  background-color: #fff;
-  color: #000;
-  border-color: #ddd;
+  background-color: #f4f7ff;
+  color: #1a1a1a;
+  border: 1px solid #dde3f0;
+  border-left: 3px solid #0066ff;
 }
 
+/* Message formatting */
 .message-line {
-  margin: 4px 0;
-  line-height: 1.6;
+  margin: 5px 0;
+  line-height: 1.75;
+  font-size: 15px;
 }
 
 .message-heading {
   font-weight: 700;
-  font-size: 16px;
-  margin: 12px 0 8px 0;
-  color: #fff;
+  font-size: 15.5px;
+  margin: 14px 0 6px 0;
+  color: #a8c8ff;
+  letter-spacing: 0.2px;
 }
 
 .home-page.light-theme .message-heading {
-  color: #000;
+  color: #0044cc;
 }
 
 .message-line strong,
@@ -248,21 +255,24 @@
 }
 
 .list-item {
-  margin: 6px 0;
-  padding-left: 8px;
-  line-height: 1.6;
+  margin: 5px 0;
+  padding-left: 10px;
+  line-height: 1.75;
+  font-size: 15px;
 }
 
 .list-item.numbered {
   font-weight: 500;
+  padding-left: 4px;
 }
 
 .list-item.bullet {
-  padding-left: 16px;
+  padding-left: 18px;
+  position: relative;
 }
 
 .message-spacer {
-  height: 8px;
+  height: 6px;
 }
 
 @keyframes fadeIn {
@@ -369,12 +379,8 @@
 }
 
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-20px) rotate(180deg);
-  }
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(180deg); }
 }
 
 .delete-btn {
@@ -383,6 +389,86 @@
   border: none;
   background: transparent;
   cursor: pointer;
+}
+
+/* Mic button */
+.mic-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 8px;
+  transition: transform 0.2s;
+  color: #ffffff;
+}
+
+.home-page.light-theme .mic-btn {
+  color: #333333;
+}
+
+.mic-btn svg { display: block; }
+
+.mic-btn:hover { transform: scale(1.2); }
+
+.mic-active {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+}
+
+/* Stop speech button */
+.stop-speech-btn {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  z-index: 999;
+}
+
+.stop-speech-btn:hover { background: #c0392b; }
+
+/* Play / read aloud button */
+.play-btn {
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.45;
+  color: inherit;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: opacity 0.2s, background 0.2s;
+  font-family: inherit;
+}
+
+.play-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.home-page.light-theme .play-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Divider */
+.divider {
+  text-align: center;
+  margin: 12px 0;
+  color: #888;
+  font-size: 13px;
 }
 
 @media (max-width: 768px) {

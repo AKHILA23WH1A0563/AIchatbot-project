@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import "./Home.css";
 import DeleteModal from "./DeleteModal";
 
-// Centralized API URL for your EC2 Backend
-const BASE_URL = "http://13.205.31.186:8000";
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+const BASE_URL = process.env.REACT_APP_BASE_URL || "http://localhost:8000";
 
 function Home() {
   const [question, setQuestion] = useState("");
@@ -24,6 +25,52 @@ function Home() {
   const [sessionToDelete, setSessionToDelete] = useState(null);
 
   const chatWindowRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const startListening = () => {
+    if (!SpeechRecognition) return alert("Speech recognition not supported in this browser.");
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => {
+      if (recognitionRef.current) recognition.start();
+    };
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results)
+        .map((r) => r[0].transcript)
+        .join(" ");
+      setQuestion(transcript);
+    };
+    recognition.onerror = (e) => {
+      if (e.error !== "no-speech") { recognitionRef.current = null; setIsListening(false); }
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const stopListening = () => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setIsListening(false);
+  };
+
+  const speakText = (text) => {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+  };
 
   useEffect(() => {
     localStorage.setItem("userId", userId);
@@ -31,33 +78,8 @@ function Home() {
 
   useEffect(() => {
     loadSessions();
-    restoreLastSession();
+    localStorage.removeItem("lastSessionId");
   }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const restoreLastSession = async () => {
-    const lastSessionId = localStorage.getItem("lastSessionId");
-    if (!lastSessionId) return;
-
-    try {
-      // UPDATED: Pointing to EC2 Public IP
-      const response = await fetch(`${BASE_URL}/chat/history/${lastSessionId}`);
-      const data = await response.json();
-
-      if (data.messages && data.messages.length > 0) {
-        const loadedMessages = data.messages
-          .map((msg) => [
-            { text: msg.query, sender: "user" },
-            { text: msg.response, sender: "ai" }
-          ])
-          .flat();
-
-        setMessages(loadedMessages);
-        setSessionId(lastSessionId);
-      }
-    } catch (error) {
-      console.error("Error restoring session:", error);
-    }
-  };
 
   const loadSessions = async () => {
     try {
@@ -233,10 +255,10 @@ function Home() {
     <div className={`home-page ${isDarkTheme ? "dark-theme" : "light-theme"}`}>
       <div className="sidebar">
         <button className="menu-btn" onClick={handleNewChat}>+ New Chat</button>
-        <button className="menu-btn" onClick={toggleHistory}>🕒 Chat History</button>
         <button className="menu-btn" onClick={toggleTheme}>
           {isDarkTheme ? "☀️ Light Theme" : "🌙 Dark Theme"}
         </button>
+        <button className="menu-btn" onClick={toggleHistory}>🕒 Chat History</button>
 
         {showHistory && (
           <div className="history-panel">
@@ -271,6 +293,15 @@ function Home() {
               {messages.map((msg, index) => (
                 <div key={index} className={`message-bubble ${msg.sender}-bubble`}>
                   {msg.sender === "ai" ? formatMessage(msg.text) : msg.text}
+                  {msg.sender === "ai" && (
+                    <button
+                      className="play-btn"
+                      onClick={() => speakText(msg.text)}
+                      title="Read aloud"
+                    >
+                      🔊
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -286,12 +317,26 @@ function Home() {
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
             />
+            <button
+              className={`mic-btn ${isListening ? "mic-active" : ""}`}
+              onClick={isListening ? stopListening : startListening}
+              title={isListening ? "Stop listening" : "Speak"}
+            >
+              {isListening ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#ff4444"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0 0 14 0" stroke="#ff4444" strokeWidth="2" fill="none" strokeLinecap="round"/><line x1="12" y1="19" x2="12" y2="23" stroke="#ff4444" strokeWidth="2" strokeLinecap="round"/><line x1="8" y1="23" x2="16" y2="23" stroke="#ff4444" strokeWidth="2" strokeLinecap="round"/></svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/><line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              )}
+            </button>
             <button className="send-icon-btn" onClick={handleSend}>➤</button>
           </div>
         </div>
         <div className="sparkle">✦</div>
       </div>
 
+      {isSpeaking && (
+        <button className="stop-speech-btn" onClick={stopSpeaking} title="Stop speaking">🔇 Stop</button>
+      )}
       <DeleteModal isOpen={showDeleteModal} onClose={cancelDelete} onConfirm={confirmDelete} />
     </div>
   );

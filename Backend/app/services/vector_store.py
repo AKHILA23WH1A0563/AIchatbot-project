@@ -103,9 +103,9 @@ def upsert_chunks(
 
 def search_chunks_mmr(
     query: str,
-    k: int = 4,
-    fetch_k: int = 10,
-    similarity_threshold: float = 0.35
+    k: int = 6,
+    fetch_k: int = 15,
+    similarity_threshold: float = 0.2
 ) -> List[Dict[str, Any]]:
     """
     MMR-based semantic search for diverse and relevant results.

@@ -23,7 +23,7 @@ def initialize_llm():
             groq_api_key=GROQ_API_KEY,
             model_name="llama-3.1-8b-instant",
             temperature=0.2,
-            max_tokens=400
+            max_tokens=1024
         )
         print("✅ Using Groq LLM")
         return llm
@@ -75,7 +75,7 @@ def get_ai_response(query: str, chat_history: list = None, top_k: int = 3):
         print(f"Rewritten: {rewritten_query}")
         
         # Use MMR retrieval
-        retrieved_chunks = search_chunks_mmr(rewritten_query, k=top_k, fetch_k=10)
+        retrieved_chunks = search_chunks_mmr(rewritten_query, k=6, fetch_k=15)
         
         # Filter for relevance
         filtered_chunks = filter_relevant_chunks(retrieved_chunks, rewritten_query)
@@ -108,7 +108,7 @@ def get_ai_response(query: str, chat_history: list = None, top_k: int = 3):
 
             sources.add(source)
 
-            truncated_content = content[:1000] if len(content) > 1000 else content
+            truncated_content = content[:1500] if len(content) > 1500 else content
             context_parts.append(f"[Source: {source}]\n{truncated_content}")
 
         combined_context = "\n\n".join(context_parts)

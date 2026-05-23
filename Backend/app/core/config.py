@@ -11,9 +11,8 @@ class Settings(BaseSettings):
     
     GROQ_API_KEY: str
     
-    # Change this line to make it optional
-    # This prevents the "Field required" crash if the key isn't in your .env
-    OPENAI_API_KEY: Optional[str] = None 
+    OPENAI_API_KEY: Optional[str] = None
+    GOOGLE_CLIENT_ID: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file=".env", 
