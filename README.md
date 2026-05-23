@@ -120,7 +120,6 @@ AIchatbot-project-main/
 ## Future Enhancements
 
 * [ ] Multi-language support for international users
-* [ ] Voice input/output capabilities
 * [ ] Advanced filtering and search options
 * [ ] Analytics dashboard for usage insights
 * [ ] Integration with external travel APIs

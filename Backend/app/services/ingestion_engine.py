@@ -3,60 +3,112 @@ import uuid
 from datetime import datetime
 from typing import List, Dict, Any
 
-from pypdf import PdfReader
-from app.services.vector_store import upsert_chunks 
+from app.chunker import chunk_documents
+from app.services.vector_store import upsert_chunks
 
 DATA_SOURCE_PATH = "data_source"
 
-def ingest_all_sources() -> List[Dict[str, Any]]:
-    data_source_path = DATA_SOURCE_PATH
-    all_chunks: List[Dict[str, Any]] = []
+def extract_text_from_pdf(path: str) -> str:
+    """Extract text using pymupdf (fitz) with pypdf as fallback."""
+    text = ""
 
-    if not os.path.exists(data_source_path):
-        print(f"Folder {data_source_path} not found!")
-        return []
+    # Try pymupdf first — handles more PDF types
+    try:
+        import fitz
+        doc = fitz.open(path)
+        for page in doc:
+            text += page.get_text()
+        doc.close()
+        if text.strip():
+            return text
+    except Exception as e:
+        print(f"  pymupdf failed for {path}: {e}")
 
-    for filename in os.listdir(data_source_path):
-        if filename.lower().endswith(".pdf"):
-            path = os.path.join(data_source_path, filename)
-            try:
-                reader = PdfReader(path)
-                text = ""
-                for page in reader.pages:
-                    page_text = page.extract_text() or ""
-                    text += page_text
+    # Fallback to pypdf
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(path)
+        for page in reader.pages:
+            page_text = page.extract_text() or ""
+            text += page_text
+    except Exception as e:
+        print(f"  pypdf fallback failed for {path}: {e}")
 
-                chunk = {
-                    "chunk_id": str(uuid.uuid4()),   
-                    "content": text,                 
-                    "metadata": {
-                        "source": filename,
-                        "ingestion_date": datetime.now().isoformat(),
-                        "file_type": "pdf",
-                    },
-                }
-                all_chunks.append(chunk)
-                print(f"Loaded: {filename}")
+    return text
 
-            except Exception as e:
-                print(f"Error loading {filename}: {e}")
-
-    return all_chunks
 
 def ingest_and_store_in_chroma():
-    """
-    1) Read all PDFs from data_source
-    2) Build chunk dicts (id, content, metadata)
-    3) Pass to upsert_chunks for embeddings and ChromaDB storage
-    """
-    chunks = ingest_all_sources()
-    if not chunks:
-        print("No chunks generated, nothing to store in Chroma.")
+    all_documents = []
+
+    if not os.path.exists(DATA_SOURCE_PATH):
+        print(f"Folder {DATA_SOURCE_PATH} not found!")
         return
 
-    print(f"Ingesting {len(chunks)} PDF chunks into ChromaDB...")
-    upsert_chunks(chunks)   
-    print("All PDF embeddings stored in ChromaDB.")
+    for filename in os.listdir(DATA_SOURCE_PATH):
+        if not filename.lower().endswith(".pdf"):
+            continue
+
+        path = os.path.join(DATA_SOURCE_PATH, filename)
+        print(f"Loading: {filename}")
+
+        text = extract_text_from_pdf(path)
+
+        if not text.strip():
+            print(f"  ⚠️  No text extracted from {filename} (may be a scanned image PDF)")
+            continue
+
+        word_count = len(text.split())
+        print(f"  ✅ Extracted {word_count} words")
+
+        all_documents.append({
+            "text": text,
+            "source": filename,
+            "file_type": "pdf"
+        })
+
+    if not all_documents:
+        print("No documents extracted. Nothing to store.")
+        return
+
+    # Use chunker with smaller chunks for better retrieval precision
+    chunks = chunk_documents(all_documents, chunk_size=300, overlap=50)
+    print(f"\n✅ Total chunks created: {len(chunks)}")
+
+    for doc in all_documents:
+        doc_chunks = [c for c in chunks if c["metadata"]["source"] == doc["source"]]
+        print(f"  {doc['source']}: {len(doc_chunks)} chunks")
+
+    print("\nStoring chunks in ChromaDB...")
+    upsert_chunks(chunks)
+    print(f"✅ Done. {len(chunks)} chunks stored in ChromaDB.")
+
 
 if __name__ == "__main__":
     ingest_and_store_in_chroma()
+
+
+# Alias for backward compatibility with knowledge.py
+def ingest_all_sources():
+    all_documents = []
+
+    if not os.path.exists(DATA_SOURCE_PATH):
+        print(f"Folder {DATA_SOURCE_PATH} not found!")
+        return []
+
+    for filename in os.listdir(DATA_SOURCE_PATH):
+        if not filename.lower().endswith(".pdf"):
+            continue
+
+        path = os.path.join(DATA_SOURCE_PATH, filename)
+        text = extract_text_from_pdf(path)
+
+        if not text.strip():
+            continue
+
+        all_documents.append({
+            "text": text,
+            "source": filename,
+            "file_type": "pdf"
+        })
+
+    return chunk_documents(all_documents, chunk_size=300, overlap=50)

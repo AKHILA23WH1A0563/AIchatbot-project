@@ -19,3 +19,4 @@ python-jose[cryptography]==3.5.0
 httpx==0.28.1
 chromadb
 google-auth[requests]>=2.47.0,<3.0.0
+pymupdf>=1.23.0
